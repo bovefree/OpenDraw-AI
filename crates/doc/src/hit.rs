@@ -344,7 +344,6 @@ pub fn marquee(doc: &Document, r: Rect, scope: Option<NodeId>, leaves: bool) -> 
     out
 }
 
-
 /// Objects completely enclosed by a rectangular selection marquee.
 ///
 /// Unlike `marquee` (intersection/touch selection), this respects the common
@@ -354,11 +353,7 @@ pub fn marquee(doc: &Document, r: Rect, scope: Option<NodeId>, leaves: bool) -> 
 pub fn marquee_enclosed(doc: &Document, r: Rect, scope: Option<NodeId>, leaves: bool) -> Vec<NodeId> {
     marquee(doc, r, scope, leaves)
         .into_iter()
-        .filter(|id| {
-            doc.node(*id).and_then(Node::geometric_bounds).is_some_and(|b| {
-                r.contains(b.origin()) && r.contains(Point::new(b.x1, b.y1))
-            })
-        })
+        .filter(|id| doc.node(*id).and_then(Node::geometric_bounds).is_some_and(|b| r.contains(b.origin()) && r.contains(Point::new(b.x1, b.y1))))
         .collect()
 }
 
