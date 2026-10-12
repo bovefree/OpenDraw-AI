@@ -35,7 +35,7 @@ jobs:
       - name: Check Rust formatting
         run: cargo fmt --all -- --check
       - name: Check synthetic save recovery and rollback
-        run: cargo test --locked -p vectorcraft-engine --lib tests_opendraw_stress::
+        run: "cargo test --locked -p vectorcraft-engine --lib tests_opendraw_stress::"
       - name: Check existing atomic save and recovery paths
         run: |
           cargo test --locked -p vectorcraft-engine --lib saving_writes_through_a_temporary_file
