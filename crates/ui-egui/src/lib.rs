@@ -1210,6 +1210,9 @@ impl VectorcraftApp {
             #[cfg(feature = "opendraw")]
             opendraw_shell::command_bar(self, ui);
             if self.ui.control_bar {
+                #[cfg(feature = "opendraw")]
+                opendraw_shell::property_bar(self, ui);
+                #[cfg(not(feature = "opendraw"))]
                 chrome::control_bar(self, ui);
             }
         }
