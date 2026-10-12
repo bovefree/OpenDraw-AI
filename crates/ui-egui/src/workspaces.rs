@@ -491,7 +491,7 @@ mod tests {
         save_as(&mut ui, "Mine").unwrap();
         let w = find(&ui, ESSENTIALS).unwrap();
         apply(&mut ui, &w);
-        assert!(!ui.control_bar);
+        assert_eq!(ui.control_bar, cfg!(feature = "opendraw"));
         let w = find(&ui, "Mine").unwrap();
         apply(&mut ui, &w);
         assert!(ui.control_bar && ui.dock_tab == DockTab::Layers && ui.open_panel.as_deref() == Some("stroke"));
