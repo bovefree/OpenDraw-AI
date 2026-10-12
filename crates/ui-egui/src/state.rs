@@ -80,9 +80,9 @@ impl DockTab {
     /// The tab's panel id (`window.panel`), English label and icon (when the dock is collapsed).
     pub fn info(self) -> (&'static str, &'static str, &'static str) {
         match self {
-            DockTab::Properties => ("properties", "Properties", "dc-options"),
-            DockTab::Layers => ("layers", "Layers", "layers"),
-            DockTab::Libraries => ("libraries", "Libraries", "library"),
+            DockTab::Properties => ("properties", if cfg!(feature = "opendraw") { "Proprietà" } else { "Properties" }, "dc-options"),
+            DockTab::Layers => ("layers", if cfg!(feature = "opendraw") { "Oggetti" } else { "Layers" }, "layers"),
+            DockTab::Libraries => ("libraries", if cfg!(feature = "opendraw") { "Librerie" } else { "Libraries" }, "library"),
         }
     }
 
