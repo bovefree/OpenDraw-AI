@@ -26,7 +26,7 @@ fn panel(label: &'static str, id: &'static str) -> menus::Item {
 /// offer an editable table tool.
 pub fn classic_menu_tree(mut roots: Vec<MenuRoot>) -> Vec<MenuRoot> {
     let mut take = |name: &str| roots.iter().position(|r| r.0 == name).map(|index| roots.remove(index).1).unwrap_or_default();
-    let app = take("VectorCraft");
+    let _upstream_app_menu = take("VectorCraft");
     let file = take("File");
     let mut edit = take("Edit");
     let mut object = take("Object");
@@ -48,7 +48,7 @@ pub fn classic_menu_tree(mut roots: Vec<MenuRoot>) -> Vec<MenuRoot> {
         ],
     ));
     vec![
-        ("OpenDraw AI", app),
+        ("OpenDraw AI", vec![cmd("Informazioni su OpenDraw AI", "help.about")]),
         ("File", file),
         ("Modifica", edit),
         ("Visualizza", view),
@@ -171,8 +171,9 @@ pub fn color_strip(app: &mut VectorcraftApp, ui: &mut Ui) {
                     } else {
                         None
                     };
+                    let params = if paint.is_none() { json!({"none":true}) } else { json!({"swatch":name}) };
                     if let Some(command) = command
-                        && let Err(error) = app.run(command, json!({"swatch":name}))
+                        && let Err(error) = app.run(command, params)
                     {
                         app.ui.status = error;
                     }
