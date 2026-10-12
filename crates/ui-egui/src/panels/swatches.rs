@@ -1257,6 +1257,50 @@ mod tests {
         frame_with(app, ctx, vec![Event::PointerMoved(at), button(true), button(false)], modifiers, time + 0.5, show);
     }
 
+    #[cfg(feature = "opendraw")]
+    fn right_click_tile(app: &mut VectorcraftApp, ctx: &egui::Context, name: &str, time: f64) {
+        frame(app, ctx, vec![], time, show);
+        let at = ctx.read_response(egui::Id::new(("swatch-tile", name))).unwrap_or_else(|| panic!("no tile for {name}")).rect.center();
+        let button = |pressed| Event::PointerButton {
+            pos: at, button: PointerButton::Secondary, pressed, modifiers: Modifiers::NONE,
+        };
+        frame(app, ctx, vec![Event::PointerMoved(at), button(true), button(false)], time + 0.5, show);
+    }
+
+    #[cfg(feature = "opendraw")]
+    #[test]
+    fn opendraw_swatch_primary_sets_fill_secondary_sets_stroke() {
+        let mut app = app();
+        let id = app.run("shape.rectangle", json!({"x": 0, "y": 0, "width": 50, "height": 50})).unwrap()["id"].clone();
+        app.run("select.set", json!({"ids": [id]})).unwrap();
+        let ctx = context();
+
+        // Even if the stroke proxy was active before the click, left-click
+        // must paint the fill while keeping the active proxy unchanged.
+        app.session.fill_active = false;
+        click_tile(&mut app, &ctx, "Red", Modifiers::NONE, 0.0);
+        let (fill, stroke_before) = app.session.proxy_paints();
+        assert_eq!(fill.color().map(|c| c.to_hex()), Some("#ed1c24".into()));
+        assert!(!app.session.fill_active);
+
+        // Right-click uses a different target without altering the fill or
+        // changing the selected swatch in the list.
+        let selected_before = selected(&ctx);
+        right_click_tile(&mut app, &ctx, "Bright Blue", 2.0);
+        let (after_fill, after_stroke) = app.session.proxy_paints();
+        assert_eq!(after_fill, fill);
+        assert_ne!(after_stroke, stroke_before);
+        assert_eq!(after_stroke, app.session.doc().unwrap().doc.swatch("Bright Blue").unwrap().paint);
+        assert_eq!(selected(&ctx), selected_before);
+        assert!(!app.session.fill_active);
+
+        // Right-clicking the None swatch removes only the contour.
+        right_click_tile(&mut app, &ctx, "[None]", 4.0);
+        let (after_none_fill, after_none_stroke) = app.session.proxy_paints();
+        assert_eq!(after_none_fill, fill);
+        assert!(after_none_stroke.is_none());
+    }
+
     fn selected(ctx: &egui::Context) -> Vec<String> {
         pstate(ctx, "swatch-selected")
     }
