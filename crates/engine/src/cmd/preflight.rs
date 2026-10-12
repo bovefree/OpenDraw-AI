@@ -66,18 +66,23 @@ fn run(s: &mut Session, p: &Value) -> Result<Value> {
             "rasterEffectsPpi":d.raster_effects_ppi
         }));
     }
-    let artboards: Vec<Value> = d.artboards.iter().enumerate().map(|(i, a)| {
-        let width = mm.from_pt(a.rect.width());
-        let height = mm.from_pt(a.rect.height());
-        if profile == "poster140x200" && ((width - 1400.0).abs() > 0.5 || (height - 2000.0).abs() > 0.5) {
-            findings.push(json!({
-                "code":"posterSizeMismatch","severity":"error","page":i + 1,
-                "message":"Page dimensions differ from 1400 by 2000 mm",
-                "widthMm":width,"heightMm":height
-            }));
-        }
-        json!({"page":i + 1,"widthMm":width,"heightMm":height})
-    }).collect();
+    let artboards: Vec<Value> = d
+        .artboards
+        .iter()
+        .enumerate()
+        .map(|(i, a)| {
+            let width = mm.from_pt(a.rect.width());
+            let height = mm.from_pt(a.rect.height());
+            if profile == "poster140x200" && ((width - 1400.0).abs() > 0.5 || (height - 2000.0).abs() > 0.5) {
+                findings.push(json!({
+                    "code":"posterSizeMismatch","severity":"error","page":i + 1,
+                    "message":"Page dimensions differ from 1400 by 2000 mm",
+                    "widthMm":width,"heightMm":height
+                }));
+            }
+            json!({"page":i + 1,"widthMm":width,"heightMm":height})
+        })
+        .collect();
     let preliminary_pass = findings.is_empty();
     Ok(json!({
         "profile":profile,
@@ -128,7 +133,7 @@ mod tests {
     fn bad_options_are_rejected() {
         let mut s = Session::new();
         s.execute("file.new", &json!({})).unwrap();
-        for params in [json!({"profile":"invalid"}),json!({"minBleedMm":-1}),json!({"minBleedMm":"abc"}),json!({"hidden":true}),json!([1])] {
+        for params in [json!({"profile":"invalid"}), json!({"minBleedMm":-1}), json!({"minBleedMm":"abc"}), json!({"hidden":true}), json!([1])] {
             assert!(s.execute(C, &params).is_err(), "{params}");
         }
     }
