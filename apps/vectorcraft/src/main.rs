@@ -547,11 +547,32 @@ fn open_file(path: &str) -> Result<(), String> {
 /// the version with Apple's transparent margin; elsewhere the full-bleed tile. The app ID matches
 /// `packaging/linux/ai.storyteller.vectorcraft.desktop` so Wayland docks find the launcher icon.
 fn app_icon() -> egui::IconData {
-    #[cfg(target_os = "macos")]
-    let png: &[u8] = include_bytes!("../../../assets/app-icon/vectorcraft-macos-512.png");
-    #[cfg(not(target_os = "macos"))]
-    let png: &[u8] = include_bytes!("../../../assets/app-icon/hicolor/256x256/apps/ai.storyteller.vectorcraft.png");
-    eframe::icon_data::from_png_bytes(png).unwrap_or_default()
+    #[cfg(feature = "opendraw")]
+    {
+        // Original OpenDraw preview mark, drawn in code rather than borrowing ArtCraft assets.
+        const SIDE: u32 = 64;
+        let mut rgba = Vec::with_capacity((SIDE * SIDE * 4) as usize);
+        for y in 0..SIDE {
+            for x in 0..SIDE {
+                let dx = x as i32 - 32;
+                let dy = y as i32 - 32;
+                let d = dx * dx + dy * dy;
+                let ring = (230..=575).contains(&d);
+                let nib = x >= 34 && y >= 31 && y <= 50 && (y as i32 - x as i32 + 7).abs() <= 3;
+                let rgb = if ring || nib { [81, 215, 193] } else { [22, 33, 47] };
+                rgba.extend_from_slice(&[rgb[0], rgb[1], rgb[2], 255]);
+            }
+        }
+        return egui::IconData { rgba, width: SIDE, height: SIDE };
+    }
+    #[cfg(not(feature = "opendraw"))]
+    {
+        #[cfg(target_os = "macos")]
+        let png: &[u8] = include_bytes!("../../../assets/app-icon/vectorcraft-macos-512.png");
+        #[cfg(not(target_os = "macos"))]
+        let png: &[u8] = include_bytes!("../../../assets/app-icon/hicolor/256x256/apps/ai.storyteller.vectorcraft.png");
+        eframe::icon_data::from_png_bytes(png).unwrap_or_default()
+    }
 }
 
 /// Windows shows a window's big icon (`ICON_BIG`) in the taskbar and Alt+Tab; eframe sets only the
@@ -586,7 +607,7 @@ fn custom_titlebar(saved: Option<&vectorcraft_ui_egui::UiState>) -> bool {
 fn native_options(custom_titlebar: bool) -> eframe::NativeOptions {
     eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_title("VectorCraft")
+            .with_title(vectorcraft_ui_egui::chrome::APP_NAME)
             .with_inner_size(window::DEFAULT_SIZE)
             .with_min_inner_size(window::MIN_SIZE)
             .with_drag_and_drop(true)
@@ -595,7 +616,7 @@ fn native_options(custom_titlebar: bool) -> eframe::NativeOptions {
             .with_titlebar_shown(false)
             .with_title_shown(false)
             .with_icon(app_icon())
-            .with_app_id("ai.storyteller.vectorcraft"),
+            .with_app_id(if cfg!(feature = "opendraw") { "org.opendraw.ai.preview" } else { "ai.storyteller.vectorcraft" }),
         #[cfg(feature = "windows7")]
         renderer: eframe::Renderer::Glow,
         ..Default::default()
@@ -756,7 +777,7 @@ fn main() -> std::process::ExitCode {
     // A panic that ends the window (egui-wgpu's own, #502) is caught here: never a crash.
     let outcome = vectorcraft_engine::guard::catch_panic(|| {
         eframe::run_native(
-            "VectorCraft",
+            vectorcraft_ui_egui::chrome::APP_NAME,
             options,
             Box::new(move |cc| {
                 let mut app = VectorcraftApp::new(Session::new(), services(cc.winit_window().cloned(), cc.egui_ctx.clone()));
