@@ -14,6 +14,8 @@
 
 use serde_json::{Value, json};
 use vectorcraft_doc::hit::{hit_test, marquee, objects_at};
+#[cfg(feature = "opendraw")]
+use vectorcraft_doc::hit::marquee_enclosed;
 use vectorcraft_doc::{NodeId, OrientedBox};
 use vectorcraft_geom::{Affine, Point, Rect, Vec2};
 
@@ -435,6 +437,12 @@ impl Tool for SelectionTool {
                 if r.width() < Self::drag_threshold(cx) && r.height() < Self::drag_threshold(cx) {
                     return if toggle { vec![] } else { vec![Action::Exec("select.none".into(), json!({}))] };
                 }
+                // OpenDraw AI mirrors Corel's Pick tool: fully enclosed by default;
+                // Alt selects objects touched by the box. Upstream preserves touch selection.
+                #[cfg(feature = "opendraw")]
+                let ids: Vec<NodeId> =
+                    if m.alt { marquee(cx.doc, r, cx.isolation, false) } else { marquee_enclosed(cx.doc, r, cx.isolation, false) };
+                #[cfg(not(feature = "opendraw"))]
                 let ids: Vec<NodeId> = marquee(cx.doc, r, cx.isolation, false);
                 vec![Action::Exec(if toggle { "select.toggle" } else { "select.set" }.into(), json!({ "ids": json_ids(&ids) }))]
             }
@@ -883,6 +891,28 @@ mod tests {
         s.add(a);
         s.add(b);
         assert!(click(&d, &s, c).is_empty(), "a compound-path member is not a key object");
+    }
+
+    #[cfg(feature = "opendraw")]
+    #[test]
+    fn opendraw_pick_marquee_uses_enclosure_and_alt_for_intersection() {
+        let (d, id) = doc_with_rect();
+        let selected = Selection::default();
+        let paint = paint();
+        let cx = cx(&d, &selected, &paint);
+        let mut tool = SelectionTool::default();
+        // The default sample rectangle spans 100..200; this marquee ends at
+        // 150 and therefore reaches only part of the shape.
+        tool.pointer(&cx, &ev(PointerKind::Down, 50.0, 50.0));
+        tool.pointer(&cx, &ev(PointerKind::Drag, 150.0, 150.0));
+        let result = tool.pointer(&cx, &ev(PointerKind::Up, 150.0, 150.0));
+        assert_eq!(result, vec![Action::Exec("select.set".into(), json!({"ids": []}))]);
+
+        let alt = Mods { alt: true, ..Default::default() };
+        tool.pointer(&cx, &ev(PointerKind::Down, 50.0, 50.0).with_mods(alt));
+        tool.pointer(&cx, &ev(PointerKind::Drag, 150.0, 150.0).with_mods(alt));
+        let result = tool.pointer(&cx, &ev(PointerKind::Up, 150.0, 150.0).with_mods(alt));
+        assert_eq!(result, vec![Action::Exec("select.set".into(), json!({"ids": [id.0]}))]);
     }
 
     #[test]
