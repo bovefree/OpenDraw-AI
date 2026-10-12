@@ -1,6 +1,9 @@
 name: OpenDraw reliability and stress
 
 on:
+  push:
+    branches:
+      - opendraw/od-011-reliability-tests
   pull_request:
     paths:
       - '.github/workflows/opendraw-reliability.yml'
