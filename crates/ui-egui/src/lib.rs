@@ -37,6 +37,8 @@ pub mod io;
 pub mod menus;
 pub mod native_menu;
 pub mod opening;
+#[cfg(feature = "opendraw")]
+pub mod opendraw_shell;
 pub mod palette;
 mod panel_docking;
 pub mod panels;
@@ -1205,6 +1207,8 @@ impl VectorcraftApp {
         let t = theme::Tokens::get(&ctx);
         if self.ui.screen_mode < 2 {
             chrome::app_bar(self, ui);
+            #[cfg(feature = "opendraw")]
+            opendraw_shell::command_bar(self, ui);
             if self.ui.control_bar {
                 chrome::control_bar(self, ui);
             }
@@ -1215,6 +1219,10 @@ impl VectorcraftApp {
         }
         if self.ui.toolbar && self.ui.screen_mode < 3 {
             toolbar::show(self, ui);
+        }
+        #[cfg(feature = "opendraw")]
+        if self.ui.screen_mode < 3 {
+            opendraw_shell::color_strip(self, ui);
         }
         if self.ui.dock && self.ui.screen_mode < 3 {
             dock::show(self, ui);
