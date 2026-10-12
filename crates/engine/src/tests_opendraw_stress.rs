@@ -17,12 +17,7 @@ fn synthetic_document(objects: usize) -> Session {
     for i in 0..objects {
         let col = i % 25;
         let row = i / 25;
-        session
-            .execute(
-                "shape.rectangle",
-                &json!({"x":col as f64 * 30.0,"y":row as f64 * 30.0,"width":20,"height":20}),
-            )
-            .unwrap();
+        session.execute("shape.rectangle", &json!({"x":col as f64 * 30.0,"y":row as f64 * 30.0,"width":20,"height":20})).unwrap();
     }
     session
 }
@@ -68,9 +63,7 @@ fn opendraw_stress_batch_failure_rolls_back_every_object() {
     let before = session.doc().unwrap().doc.clone();
     let prior_undo = session.doc().unwrap().history.undo.len();
 
-    let mut commands: Vec<Value> = (0..40)
-        .map(|i| json!({"command":"shape.rectangle","params":{"x":i * 8,"y":500,"width":6,"height":6}}))
-        .collect();
+    let mut commands: Vec<Value> = (0..40).map(|i| json!({"command":"shape.rectangle","params":{"x":i * 8,"y":500,"width":6,"height":6}})).collect();
     commands.push(json!({"command":"invalid.command.must.fail","params":{}}));
     assert!(session.execute("command.batch", &json!({"label":"Synthetic layout","commands":commands})).is_err());
     assert_eq!(session.doc().unwrap().doc, before, "partial AI batches must never corrupt the document");
@@ -89,9 +82,7 @@ fn opendraw_benchmark_two_thousand_objects_and_round_trip() {
     let encoded = session.execute("document.serialize", &json!({"format":"vectorcraft"})).unwrap();
     let save_time = save_start.elapsed();
     let open_start = Instant::now();
-    session
-        .execute("document.open", &json!({"name":"benchmark.vectorcraft","dataBase64":encoded["dataBase64"]}))
-        .unwrap();
+    session.execute("document.open", &json!({"name":"benchmark.vectorcraft","dataBase64":encoded["dataBase64"]})).unwrap();
     let open_time = open_start.elapsed();
     assert_eq!(session.doc().unwrap().doc.artboards.len(), 4);
     eprintln!("OpenDraw synthetic 2000: create={build_time:?}, save={save_time:?}, open={open_time:?}");
