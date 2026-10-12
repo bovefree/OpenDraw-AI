@@ -1232,6 +1232,15 @@ impl VectorcraftApp {
             opendraw_shell::color_strip(self, ui);
         }
         if self.ui.dock && self.ui.screen_mode < 3 {
+            #[cfg(feature = "opendraw")]
+            {
+                if self.ui.workspace == "Classica" {
+                    opendraw_shell::classic_dock(self, ui);
+                } else {
+                    dock::show(self, ui);
+                }
+            }
+            #[cfg(not(feature = "opendraw"))]
             dock::show(self, ui);
         }
         egui::CentralPanel::default().frame(egui::Frame::NONE.fill(t.pasteboard)).show(ui, |ui| {
