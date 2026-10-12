@@ -1922,8 +1922,11 @@ fn home(app: &mut VectorcraftApp, ui: &mut Ui, rect: egui::Rect) {
     });
     recent(app, ui);
     ui.add_space(28.0);
-    ui.label(egui::RichText::new(if cfg!(feature = "opendraw") { "Crea rapidamente un documento" } else { tl!("Quickly start a new file") })
-        .font(theme::semibold(14.0)).color(t.text));
+    ui.label(
+        egui::RichText::new(if cfg!(feature = "opendraw") { "Crea rapidamente un documento" } else { tl!("Quickly start a new file") })
+            .font(theme::semibold(14.0))
+            .color(t.text),
+    );
     ui.add_space(10.0);
     // A few of New Document's presets (`file.newPresets`), as its cards.
     let presets = ["Letter", "A4", "Web 1920×1080", "Phone 390×844", "Postcard", "Social Square Post 1080×1080"];
@@ -1955,8 +1958,11 @@ fn recent(app: &mut VectorcraftApp, ui: &mut Ui) {
     }
     let t = Tokens::get(ui.ctx());
     ui.add_space(28.0);
-    ui.label(egui::RichText::new(if cfg!(feature = "opendraw") { "Documenti recenti" } else { tl!("Recent Files") })
-        .font(theme::semibold(14.0)).color(t.text));
+    ui.label(
+        egui::RichText::new(if cfg!(feature = "opendraw") { "Documenti recenti" } else { tl!("Recent Files") })
+            .font(theme::semibold(14.0))
+            .color(t.text),
+    );
     ui.add_space(8.0);
     for path in files {
         let p = std::path::Path::new(&path);
