@@ -344,6 +344,19 @@ pub fn marquee(doc: &Document, r: Rect, scope: Option<NodeId>, leaves: bool) -> 
     out
 }
 
+/// Objects completely enclosed by a rectangular selection marquee.
+///
+/// Unlike `marquee` (intersection/touch selection), this respects the common
+/// Corel-style Pick behavior. The geometric bounds must fit inside the marquee;
+/// an object partly inside remains unselected. The candidate set still goes
+/// through `marquee` so hidden/locked objects, groups, and isolation rules agree.
+pub fn marquee_enclosed(doc: &Document, r: Rect, scope: Option<NodeId>, leaves: bool) -> Vec<NodeId> {
+    marquee(doc, r, scope, leaves)
+        .into_iter()
+        .filter(|id| doc.node(*id).and_then(Node::geometric_bounds).is_some_and(|b| r.contains(b.origin()) && r.contains(Point::new(b.x1, b.y1))))
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -398,6 +411,20 @@ mod tests {
         assert_eq!(marquee(&d, Rect::new(40.0, 40.0, 70.0, 70.0), None, false), vec![small]);
         // Reaching the background's edge takes it too.
         assert_eq!(marquee(&d, Rect::new(-5.0, 40.0, 70.0, 70.0), None, false), vec![back, small]);
+    }
+
+    #[test]
+    fn enclosed_marquee_excludes_partly_touched_objects() {
+        let mut d = Document::new(200.0, 200.0);
+        let l = d.layers[0].id;
+        let inside = d.alloc_id();
+        let partial = d.alloc_id();
+        d.insert(Some(l), 0, Node::path(inside, shapes::rectangle(Rect::new(50.0, 50.0, 60.0, 60.0)), Appearance::default_art())).unwrap();
+        d.insert(Some(l), 1, Node::path(partial, shapes::rectangle(Rect::new(65.0, 65.0, 110.0, 110.0)), Appearance::default_art())).unwrap();
+        let box_rect = Rect::new(40.0, 40.0, 75.0, 75.0);
+        assert_eq!(marquee(&d, box_rect, None, false), vec![inside, partial], "intersection mode includes touched objects");
+        assert_eq!(marquee_enclosed(&d, box_rect, None, false), vec![inside], "enclosure mode omits partial objects");
+        assert_eq!(marquee_enclosed(&d, Rect::new(40.0, 40.0, 120.0, 120.0), None, false), vec![inside, partial]);
     }
 
     #[test]

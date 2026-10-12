@@ -1,0 +1,44 @@
+name: OpenDraw Pick tool compatibility
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/opendraw-pick-tool.yml'
+      - 'crates/doc/src/hit.rs'
+      - 'crates/tools/src/select.rs'
+      - 'crates/tools/Cargo.toml'
+      - 'crates/ui-egui/Cargo.toml'
+      - 'docs/opendraw/CORELDRAW_USER_FEEDBACK.md'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pick-tool:
+    name: Pick tool enclosure and upstream regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.95.0'
+          components: rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: Format Rust code
+        run: cargo fmt --all -- --check
+      - name: Test enclosed vs intersecting marquee
+        run: cargo test --locked -p vectorcraft-doc enclosed_marquee_excludes_partly_touched_objects --lib
+      - name: Test OpenDraw Pick with Alt alternative
+        run: cargo test --locked -p vectorcraft-tools --features opendraw --lib opendraw_pick_marquee_uses_enclosure_and_alt_for_intersection
+      - name: Existing selection tests with OpenDraw behavior
+        run: cargo test --locked -p vectorcraft-tools --features opendraw --lib marquee
+      - name: Existing selection tests with upstream defaults
+        run: cargo test --locked -p vectorcraft-tools --lib marquee

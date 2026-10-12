@@ -8,6 +8,10 @@ description = "VectorCraft tool state machines: pointer events in, commands and 
 [lints]
 workspace = true
 
+[features]
+# Corel-style Pick-tool selection behavior, enabled only by OpenDraw AI.
+opendraw = []
+
 [dependencies]
 vectorcraft-geom = { workspace = true }
 vectorcraft-color = { workspace = true }
