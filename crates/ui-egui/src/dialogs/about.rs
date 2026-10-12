@@ -52,8 +52,7 @@ fn about_tab(app: &mut VectorcraftApp, ui: &mut egui::Ui) {
         let (r, _) = ui.allocate_exact_size(egui::vec2(44.0, 44.0), egui::Sense::hover());
         crate::brand::paint_mark(ui, r);
         ui.vertical(|ui| {
-            ui.label(egui::RichText::new(if cfg!(feature = "opendraw") { "OpenDraw AI" } else { "VectorCraft" })
-                .font(theme::semibold(22.0)));
+            ui.label(egui::RichText::new(if cfg!(feature = "opendraw") { "OpenDraw AI" } else { "VectorCraft" }).font(theme::semibold(22.0)));
             if cfg!(feature = "opendraw") {
                 ui.label(format!("Versione {} — software sperimentale di grafica vettoriale.", env!("CARGO_PKG_VERSION")));
             } else {
