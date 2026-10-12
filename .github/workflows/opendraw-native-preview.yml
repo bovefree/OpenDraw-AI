@@ -15,6 +15,11 @@ on:
 permissions:
   contents: read
 
+# Only the newest push to a pull request should consume build runners.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   windows:
     name: Windows x64 portable technology preview
