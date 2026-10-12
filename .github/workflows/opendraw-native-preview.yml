@@ -1,0 +1,83 @@
+# Native preview builds of the existing VectorCraft engine with experimental OpenDraw changes.
+# These archives retain the upstream executable name and branding. They are NOT an OpenDraw release.
+name: OpenDraw native preview
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/opendraw-native-preview.yml'
+      - 'crates/engine/src/cmd/newdoc.rs'
+      - 'apps/vectorcraft/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Windows x64 portable technology preview
+    runs-on: windows-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.95.0'
+      - uses: Swatinem/rust-cache@v2
+      - name: Compile app and automation CLI
+        run: cargo build --release --locked -p vectorcraft -p vectorcraft-cli
+      - name: Verify CLI starts
+        shell: pwsh
+        run: '& .\target\release\vectorcraft-cli.exe --version'
+      - name: Assemble portable test archive
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path 'dist/preview-win' | Out-Null
+          Copy-Item 'target/release/vectorcraft.exe','target/release/vectorcraft-cli.exe' 'dist/preview-win/'
+          foreach ($file in @('LICENSE-MIT','LICENSE-APACHE','NOTICE')) {
+            if (Test-Path $file) { Copy-Item $file 'dist/preview-win/' }
+          }
+          @'
+          OpenDraw AI - Technology Preview
+          This archive contains the upstream-named VectorCraft engine with experimental
+          OpenDraw changes. It is NOT an independently branded OpenDraw release.
+          Run vectorcraft.exe. The OpenDraw large-format preset is under New Document > Print.
+          Run vectorcraft-cli.exe --version to test the automation CLI.
+          Use copies of documents, not originals. No support for .cdr files.
+          '@ | Set-Content -Encoding UTF8 'dist/preview-win/READ_FIRST.txt'
+          Compress-Archive -Path 'dist/preview-win/*' -DestinationPath 'dist/opendraw-engine-preview-windows-x64.zip' -Force
+      - uses: actions/upload-artifact@v4
+        with:
+          name: opendraw-engine-preview-windows-x64
+          path: dist/opendraw-engine-preview-windows-x64.zip
+          retention-days: 14
+          if-no-files-found: error
+
+  macos:
+    name: macOS Apple Silicon technology preview
+    runs-on: macos-15
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.95.0'
+          targets: aarch64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: macos-arm64-preview
+      - name: Build Apple Silicon app and DMG
+        run: bash packaging/macos/package.sh --arch aarch64
+      - name: Check Apple Silicon binary architecture
+        run: lipo -info target/aarch64-apple-darwin/release/vectorcraft
+      - uses: actions/upload-artifact@v4
+        with:
+          name: opendraw-engine-preview-macos-arm64
+          path: |
+            dist/release/vectorcraft-*-macos-aarch64.dmg
+            dist/release/vectorcraft-cli-*-macos-aarch64.zip
+          retention-days: 14
+          if-no-files-found: error
