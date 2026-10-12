@@ -1,0 +1,38 @@
+# Minimal OpenDraw AI baseline CI. This is a compatibility smoke test, not a release build.
+name: OpenDraw baseline
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/opendraw-baseline.yml'
+      - 'docs/opendraw/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'crates/**'
+      - 'apps/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  baseline:
+    name: Rust check and format test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-15]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Rust 1.95
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.95.0"
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+      - name: Verify desktop and CLI build
+        run: cargo check --locked -p vectorcraft -p vectorcraft-cli
+      - name: Check file-format unit tests
+        run: cargo test --locked -p vectorcraft-format --lib

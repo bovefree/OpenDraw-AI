@@ -1,0 +1,38 @@
+# Test the native OpenDraw print preset without relying on GUI or installer jobs.
+name: OpenDraw print preset
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/opendraw-print-preset.yml'
+      - 'crates/engine/src/cmd/newdoc.rs'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Only the newest push to a pull request should consume build runners.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preset:
+    name: Preset test and Rust formatting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Rust toolchain 1.95 + rustfmt
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.95.0'
+          components: rustfmt
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Test OpenDraw poster geometry, bleed and color mode
+        run: cargo test --locked -p vectorcraft-engine opendraw_tests::poster_print_preset_has_physical_dimensions_cmyk_and_bleed --lib

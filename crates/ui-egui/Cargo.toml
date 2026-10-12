@@ -8,6 +8,10 @@ description = "VectorCraft egui frontend (menus, panels, tools and canvas); swap
 [lints]
 workspace = true
 
+[features]
+# OpenDraw AI preview UI; the default build remains unmodified VectorCraft.
+opendraw = []
+
 [dependencies]
 craft-ui = { workspace = true }
 vectorcraft-geom = { workspace = true }
