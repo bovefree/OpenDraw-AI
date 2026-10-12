@@ -1755,8 +1755,6 @@ mod tests_maskview;
 #[cfg(test)]
 mod tests_menucmds;
 #[cfg(test)]
-mod tests_opendraw_stress;
-#[cfg(test)]
 mod tests_nativefile;
 #[cfg(test)]
 mod tests_newart;
@@ -1766,6 +1764,8 @@ mod tests_newdoc;
 mod tests_objexpand;
 #[cfg(test)]
 mod tests_opacitymask;
+#[cfg(test)]
+mod tests_opendraw_stress;
 #[cfg(test)]
 mod tests_outlinestroke;
 #[cfg(test)]
