@@ -117,13 +117,14 @@ fn home_lists_recent_files_and_a_click_opens_one() {
     let ctx = egui::Context::default();
     crate::theme::install_fonts(&ctx);
     let has = |texts: &[(String, egui::Rect)], s: &str| texts.iter().any(|(t, _)| t == s);
-    assert!(!has(&home_texts(&mut app, &ctx, vec![]), "Recent Files"), "none: no section");
+    let recent_label = if cfg!(feature = "opendraw") { "Documenti recenti" } else { "Recent Files" };
+    assert!(!has(&home_texts(&mut app, &ctx, vec![]), recent_label), "none: no section");
     let dir = std::env::temp_dir().join("vectorcraft-home-recent");
     let missing = dir.join("Gone.svg").to_string_lossy().into_owned();
     app.ui.recent_files = (0..9).map(|i| dir.join(format!("Drawing {i}.svg")).to_string_lossy().into_owned()).collect();
     app.ui.recent_files.insert(0, missing);
     let texts = home_texts(&mut app, &ctx, vec![]);
-    assert!(has(&texts, "Recent Files") && has(&texts, "Gone.svg") && has(&texts, "Drawing 4.svg"), "{texts:?}");
+    assert!(has(&texts, recent_label) && has(&texts, "Gone.svg") && has(&texts, "Drawing 4.svg"), "{texts:?}");
     assert!(!has(&texts, "Drawing 5.svg"), "the first six only");
     assert!(has(&texts, &dir.to_string_lossy()), "with its folder");
     let at = texts.iter().find(|(t, _)| t == "Gone.svg").map(|(_, r)| r.center()).unwrap();
@@ -132,4 +133,18 @@ fn home_lists_recent_files_and_a_click_opens_one() {
     home_texts(&mut app, &ctx, vec![press(false)]);
     assert!(app.session.documents().is_empty());
     assert!(!app.ui.status.is_empty(), "a file that can't be opened says so");
+}
+
+#[cfg(feature = "opendraw")]
+#[test]
+fn opendraw_home_has_original_brand_and_no_upstream_links() {
+    let mut app = VectorcraftApp::new(vectorcraft_engine::Session::new(), crate::Services::default());
+    let ctx = egui::Context::default();
+    crate::theme::install_fonts(&ctx);
+    let texts: Vec<String> = home_texts(&mut app, &ctx, vec![]).into_iter().map(|(text, _)| text).collect();
+    assert!(texts.iter().any(|text| text == "Benvenuto in OpenDraw AI"), "{texts:?}");
+    assert!(texts.iter().any(|text| text == "Crea rapidamente un documento"), "{texts:?}");
+    for forbidden in ["VectorCraft", "ArtCraft", "Discord", "getartcraft.com"] {
+        assert!(!texts.iter().any(|text| text.contains(forbidden)), "{forbidden} should not appear in the OpenDraw home: {texts:?}");
+    }
 }
