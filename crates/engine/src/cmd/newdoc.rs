@@ -435,12 +435,12 @@ pub const CATEGORIES: &[Category] = &[
             ("Legal", 612.0, 1008.0, PT),
             ("Tabloid", 792.0, 1224.0, PT),
             ("A3", 297.0, 420.0, MM),
-            // OpenDraw AI: large-format poster at its full physical dimensions.
-            ("OpenDraw Manifesto 140×200 cm", 1400.0, 2000.0, MM),
             ("A4", 210.0, 297.0, MM),
             ("A5", 148.0, 210.0, MM),
             ("B4", 250.0, 353.0, MM),
             ("B5", 176.0, 250.0, MM),
+            // OpenDraw AI: append without changing existing print-preset ordering.
+            ("OpenDraw Manifesto 140×200 cm", 1400.0, 2000.0, MM),
         ],
     ),
     (
