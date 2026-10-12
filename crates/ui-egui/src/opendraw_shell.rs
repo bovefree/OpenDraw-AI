@@ -25,9 +25,7 @@ fn panel(label: &'static str, id: &'static str) -> menus::Item {
 /// Unimplemented tables remain explicitly disabled rather than pretending to
 /// offer an editable table tool.
 pub fn classic_menu_tree(mut roots: Vec<MenuRoot>) -> Vec<MenuRoot> {
-    let mut take = |name: &str| {
-        roots.iter().position(|r| r.0 == name).map(|index| roots.remove(index).1).unwrap_or_default()
-    };
+    let mut take = |name: &str| roots.iter().position(|r| r.0 == name).map(|index| roots.remove(index).1).unwrap_or_default();
     let app = take("VectorCraft");
     let file = take("File");
     let mut edit = take("Edit");
@@ -94,13 +92,7 @@ pub fn classic_menu_tree(mut roots: Vec<MenuRoot>) -> Vec<MenuRoot> {
             ],
         ),
         ("Finestra", window),
-        (
-            "Aiuto",
-            vec![
-                cmd("Cerca comando…", "help.commandPalette"),
-                cmd("Informazioni su OpenDraw AI", "help.about"),
-            ],
-        ),
+        ("Aiuto", vec![cmd("Cerca comando…", "help.commandPalette"), cmd("Informazioni su OpenDraw AI", "help.about")]),
     ]
 }
 
@@ -149,14 +141,22 @@ pub fn color_strip(app: &mut VectorcraftApp, ui: &mut Ui) {
     let swatches: Vec<(String, Paint)> = app
         .session
         .active()
-        .map(|st| st.doc.swatches.iter().filter(|s| matches!(s.paint, Paint::None | Paint::Solid { .. })).map(|s| (s.name.clone(), s.paint.clone())).collect())
+        .map(|st| {
+            st.doc
+                .swatches
+                .iter()
+                .filter(|s| matches!(s.paint, Paint::None | Paint::Solid { .. }))
+                .map(|s| (s.name.clone(), s.paint.clone()))
+                .collect()
+        })
         .unwrap_or_default();
     egui::Panel::right("opendraw_color_strip")
         .exact_size(39.0)
         .frame(egui::Frame::NONE.fill(t.panel).inner_margin(egui::Margin::symmetric(4, 5)).stroke(Stroke::new(1.0, t.border)))
         .show(ui, |ui| {
             ui.vertical_centered(|ui| {
-                ui.label(egui::RichText::new("C").size(12.0).strong()).on_hover_text("Tavolozza: clic sinistro = riempimento, clic destro = contorno");
+                ui.label(egui::RichText::new("C").size(12.0).strong())
+                    .on_hover_text("Tavolozza: clic sinistro = riempimento, clic destro = contorno");
             });
             ui.separator();
             egui::ScrollArea::vertical().id_salt("opendraw_color_scroll").auto_shrink([false, false]).show(ui, |ui| {
