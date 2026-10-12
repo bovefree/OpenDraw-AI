@@ -12,7 +12,18 @@ fn prefs_path_with(os: &str, legacy: bool, env: impl Fn(&str) -> Option<OsString
         // Never fall back to DrawCraft's real profile when the isolated file does not exist.
         return (!legacy && !root.is_empty()).then(|| PathBuf::from(root).join("ui.json"));
     }
-    let (name, lower) = if legacy { ("DrawCraft", "drawcraft") } else { ("VectorCraft", "vectorcraft") };
+    // OpenDraw must not read or migrate VectorCraft/DrawCraft user preferences.
+    #[cfg(feature = "opendraw")]
+    if legacy {
+        return None;
+    }
+    let (name, lower) = if legacy {
+        ("DrawCraft", "drawcraft")
+    } else if cfg!(feature = "opendraw") {
+        ("OpenDraw AI", "opendraw-ai")
+    } else {
+        ("VectorCraft", "vectorcraft")
+    };
     let base = match os {
         "macos" => env("HOME").map(|p| PathBuf::from(p).join("Library/Application Support").join(name)),
         "windows" => env("APPDATA").map(|p| PathBuf::from(p).join(name)),
@@ -52,6 +63,7 @@ mod tests {
         assert_eq!(prefs_path_with("macos", true, env), None);
     }
 
+    #[cfg(not(feature = "opendraw"))]
     #[test]
     fn unset_override_keeps_platform_paths_and_legacy_migration() {
         assert_eq!(prefs_path_with("macos", false, environment), Some("/user/Library/Application Support/VectorCraft/ui.json".into()));
@@ -62,5 +74,23 @@ mod tests {
             prefs_path_with("linux", true, |key| if key == "HOME" { environment(key) } else { None }),
             Some("/user/.config/drawcraft/ui.json".into())
         );
+    }
+}
+
+#[cfg(all(test, feature = "opendraw"))]
+mod opendraw_tests {
+    use super::*;
+
+    #[test]
+    fn opendraw_profile_is_separate_from_upstream_on_both_desktops() {
+        let env = |key: &str| match key {
+            "HOME" => Some(OsString::from("/user")),
+            "APPDATA" => Some(OsString::from("/roaming")),
+            _ => None,
+        };
+        assert_eq!(prefs_path_with("windows", false, env), Some("/roaming/OpenDraw AI/ui.json".into()));
+        assert_eq!(prefs_path_with("macos", false, env), Some("/user/Library/Application Support/OpenDraw AI/ui.json".into()));
+        assert_eq!(prefs_path_with("windows", true, env), None);
+        assert_eq!(prefs_path_with("macos", true, env), None);
     }
 }
