@@ -55,6 +55,8 @@ pub mod pdfcmds;
 pub mod perspgrid;
 pub(crate) mod place;
 pub mod plugin;
+#[cfg(feature = "opendraw")]
+mod preflight;
 pub mod prefscmds;
 pub mod print;
 pub(crate) mod printadvanced;
@@ -258,6 +260,8 @@ pub fn command_specs() -> &'static [CommandSpec] {
         v.extend(newart::specs());
         v.extend(colortheme::specs());
         v.extend(fileio::pdf::specs());
+        #[cfg(feature = "opendraw")]
+        v.extend(preflight::specs());
         v.extend(docsetup::specs());
         v.extend(newdoc::specs());
         v.extend(place::specs());
