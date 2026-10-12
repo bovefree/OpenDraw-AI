@@ -1,0 +1,39 @@
+name: OpenDraw workspaces
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/opendraw-workspaces.yml'
+      - 'crates/ui-egui/src/workspaces.rs'
+      - 'crates/ui-egui/src/state.rs'
+      - 'crates/ui-egui/Cargo.toml'
+      - 'docs/opendraw/WORKSPACES.md'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  workspaces:
+    name: Workspace UI tests (OpenDraw and upstream)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.95.0'
+          components: rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: Check Rust formatting
+        run: cargo fmt --all -- --check
+      - name: Test OpenDraw workspace presets and persistence
+        run: cargo test --locked -p vectorcraft-ui-egui --features opendraw workspaces::tests --lib
+      - name: Check upstream workspace behavior
+        run: cargo test --locked -p vectorcraft-ui-egui workspaces::tests --lib
