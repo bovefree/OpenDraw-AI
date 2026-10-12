@@ -36,9 +36,9 @@ pub mod icons;
 pub mod io;
 pub mod menus;
 pub mod native_menu;
-pub mod opening;
 #[cfg(feature = "opendraw")]
 pub mod opendraw_shell;
+pub mod opening;
 pub mod palette;
 mod panel_docking;
 pub mod panels;
