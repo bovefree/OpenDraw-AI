@@ -217,6 +217,48 @@ pub fn property_bar(app: &mut VectorcraftApp, ui: &mut Ui) {
         });
 }
 
+/// Multi-page navigator directly above the status line, matching the
+/// placement in the reference screenshots. Each tab addresses a real artboard.
+pub fn page_bar(app: &mut VectorcraftApp, ui: &mut Ui) {
+    let pages = app.session.active().map_or(0, |st| st.doc.artboards.len());
+    if pages == 0 {
+        return;
+    }
+    let current = app.view().map_or(0, |v| v.artboard).min(pages - 1);
+    let t = Tokens::get(ui.ctx());
+    egui::Panel::bottom("opendraw_page_navigator")
+        .exact_size(31.0)
+        .frame(egui::Frame::NONE.fill(t.panel).inner_margin(egui::Margin::symmetric(6, 3)).stroke(Stroke::new(1.0, t.border)))
+        .show(ui, |ui| {
+            egui::ScrollArea::horizontal().auto_shrink([false, true]).show(ui, |ui| {
+                ui.horizontal_centered(|ui| {
+                    if ui.small_button("+").on_hover_text("Aggiungi pagina").clicked() {
+                        match app.run("artboard.new", json!({})) {
+                            Ok(_) => {
+                                let _ = app.run("view.goToArtboard", json!({"index":pages}));
+                            }
+                            Err(error) => app.ui.status = error,
+                        }
+                    }
+                    ui.separator();
+                    if ui.add_enabled(current > 0, egui::Button::new("◀")).clicked() {
+                        let _ = app.run("view.goToArtboard", json!({"index":"previous"}));
+                    }
+                    ui.label(format!("{} di {}", current + 1, pages));
+                    if ui.add_enabled(current + 1 < pages, egui::Button::new("▶")).clicked() {
+                        let _ = app.run("view.goToArtboard", json!({"index":"next"}));
+                    }
+                    ui.separator();
+                    for index in 0..pages {
+                        if ui.selectable_label(index == current, format!("Pagina {}", index + 1)).clicked() {
+                            let _ = app.run("view.goToArtboard", json!({"index":index}));
+                        }
+                    }
+                });
+            });
+        });
+}
+
 /// Colour strip on the outer edge of the window, beside the objects dock.
 /// Left click sets fill; right click sets outline. Swatches are *document
 /// swatches*, so named/spot/process colours retain their meaning.
