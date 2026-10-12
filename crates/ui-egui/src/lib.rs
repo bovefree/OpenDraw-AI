@@ -1220,6 +1220,10 @@ impl VectorcraftApp {
             chrome::status_bar(self, ui);
             chrome::hint_bar(self, ui);
         }
+        #[cfg(feature = "opendraw")]
+        if self.ui.screen_mode < 3 {
+            opendraw_shell::page_bar(self, ui);
+        }
         if self.ui.toolbar && self.ui.screen_mode < 3 {
             toolbar::show(self, ui);
         }
