@@ -30,6 +30,7 @@ pub fn classic_menu_tree(mut roots: Vec<MenuRoot>) -> Vec<MenuRoot> {
     let file = take("File");
     let mut edit = take("Edit");
     let mut object = take("Object");
+    let effect = take("Effect");
     let select = take("Select");
     let type_menu = take("Type");
     let view = take("View");
@@ -62,15 +63,7 @@ pub fn classic_menu_tree(mut roots: Vec<MenuRoot>) -> Vec<MenuRoot> {
             ],
         ),
         ("Oggetto", object),
-        (
-            "Effetti",
-            vec![
-                cmd("Espandi aspetto", "effect.expandAppearance"),
-                cmd("Crea mezzatinta vettoriale", "object.vectorHalftone"),
-                cmd("Appiattisci trasparenza…", "ui.flattenTransparencyDialog"),
-                panel("Aspetto", "appearance"),
-            ],
-        ),
+        ("Effetti", effect),
         (
             "Bitmap",
             vec![
