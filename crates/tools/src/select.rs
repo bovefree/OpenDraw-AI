@@ -922,10 +922,11 @@ mod tests {
         let p = paint();
         let cx = cx(&d, &s, &p);
         let mut t = SelectionTool::default();
-        t.pointer(&cx, &ev(PointerKind::Down, 50.0, 50.0));
-        t.pointer(&cx, &ev(PointerKind::Drag, 120.0, 120.0));
+        let mods = Mods { alt: cfg!(feature = "opendraw"), ..Default::default() };
+        t.pointer(&cx, &ev(PointerKind::Down, 50.0, 50.0).with_mods(mods));
+        t.pointer(&cx, &ev(PointerKind::Drag, 120.0, 120.0).with_mods(mods));
         assert_eq!(t.overlays(&cx).len(), 1);
-        let a = t.pointer(&cx, &ev(PointerKind::Up, 120.0, 120.0));
+        let a = t.pointer(&cx, &ev(PointerKind::Up, 120.0, 120.0).with_mods(mods));
         assert_eq!(a, vec![Action::Exec("select.set".into(), json!({"ids": [id.0]}))]);
     }
 
@@ -938,7 +939,7 @@ mod tests {
         let p = paint();
         let cx = cx(&d, &s, &p);
         let mut t = SelectionTool::default();
-        let shift = Mods { shift: true, ..Default::default() };
+        let shift = Mods { shift: true, alt: cfg!(feature = "opendraw"), ..Default::default() };
         t.pointer(&cx, &ev(PointerKind::Down, 50.0, 50.0).with_mods(shift));
         t.pointer(&cx, &ev(PointerKind::Drag, 120.0, 120.0).with_mods(shift));
         let a = t.pointer(&cx, &ev(PointerKind::Up, 120.0, 120.0).with_mods(shift));
