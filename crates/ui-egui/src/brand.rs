@@ -46,13 +46,7 @@ pub fn paint_mark(ui: &Ui, r: Rect) {
 #[cfg(feature = "opendraw")]
 pub fn paint_mark(ui: &Ui, r: Rect) {
     ui.painter().rect_filled(r, 4.0, Color32::from_rgb(22, 33, 47));
-    ui.painter().text(
-        r.center(),
-        egui::Align2::CENTER_CENTER,
-        "O",
-        egui::FontId::proportional(15.0),
-        Color32::from_rgb(81, 215, 193),
-    );
+    ui.painter().text(r.center(), egui::Align2::CENTER_CENTER, "O", egui::FontId::proportional(15.0), Color32::from_rgb(81, 215, 193));
 }
 
 /// The mark's texture id (tests: find the painted marks among the shapes).
