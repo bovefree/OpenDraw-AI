@@ -332,6 +332,10 @@ pub struct UiState {
     /// Current workspace (Window → Workspace).
     #[serde(default = "default_workspace")]
     pub workspace: String,
+    /// Appearance migration; older OpenDraw releases do not have this field.
+    #[cfg(feature = "opendraw")]
+    #[serde(default)]
+    pub opendraw_classic_revision: u8,
     /// User-saved workspaces (New Workspace…).
     #[serde(default)]
     pub custom_workspaces: Vec<crate::workspaces::Workspace>,
@@ -577,6 +581,24 @@ impl UiState {
                 crate::workspaces::apply(&mut self, &classic);
             }
         }
+        #[cfg(feature = "opendraw")]
+        {
+            // Alpha 2 stored a dark, crowded toolbar even when labelled
+            // "Classica". Preserve it as a recoverable custom layout and
+            // apply the compact light reference workspace once only.
+            if self.opendraw_classic_revision < 3 && self.workspace == "Classica" {
+                let backup = "Alpha 2 (layout precedente)";
+                if !self.custom_workspaces.iter().any(|w| w.name == backup) {
+                    let previous = crate::workspaces::capture(&self, backup);
+                    self.custom_workspaces.push(previous);
+                }
+                if let Some(classic) = crate::workspaces::find(&self, "Classica") {
+                    crate::workspaces::apply(&mut self, &classic);
+                }
+                self.brightness = Brightness::Light;
+            }
+            self.opendraw_classic_revision = 3;
+        }
         self.dialog = None;
         self.flyout = None;
         self.tools_drawer = false;
@@ -608,14 +630,14 @@ impl Default for UiState {
     fn default() -> Self {
         Self {
             legacy_language: None,
-            brightness: Brightness::MediumDark,
+            brightness: if cfg!(feature = "opendraw") { Brightness::Light } else { Brightness::MediumDark },
             dock_tab: if cfg!(feature = "opendraw") { DockTab::Layers } else { DockTab::Properties },
             dock_collapsed: false,
             open_panel: None,
             control_bar: cfg!(feature = "opendraw"),
             toolbar: true,
             toolbar_double: false,
-            toolbar_advanced: cfg!(feature = "opendraw"),
+            toolbar_advanced: false,
             task_bar: !cfg!(feature = "opendraw"),
             task_bar_place: TaskBarPlace::default(),
             slot_tool: Default::default(),
@@ -645,6 +667,8 @@ impl Default for UiState {
             shortcut_overrides: crate::shortcut_editor::preset(crate::shortcut_editor::PRESETS[0]).unwrap_or_default(),
             shortcut_set: default_shortcut_set(),
             workspace: default_workspace(),
+            #[cfg(feature = "opendraw")]
+            opendraw_classic_revision: 3,
             custom_workspaces: vec![],
             recent_files: vec![],
             recent_fonts: vec![],
@@ -703,7 +727,7 @@ mod tests {
         let migrated = previous.sanitized();
         assert_eq!(migrated.workspace, "Classica");
         assert!(migrated.control_bar);
-        assert!(migrated.toolbar_advanced);
+        assert!(!migrated.toolbar_advanced);
         assert_eq!(migrated.dock_tab, DockTab::Layers);
         assert_eq!(migrated.brightness, Brightness::Light);
         assert_eq!(migrated.shortcut_set, "VectorCraft Defaults");
@@ -718,6 +742,29 @@ mod tests {
         let reloaded = migrated.sanitized();
         assert_eq!(reloaded.custom_workspaces.len(), 1);
         assert_eq!(reloaded.workspace, "Classica");
+    }
+
+    #[cfg(feature = "opendraw")]
+    #[test]
+    fn alpha_two_upgrade_uses_light_classic_and_saves_old_toolbar() {
+        let mut old = UiState::default();
+        old.opendraw_classic_revision = 0;
+        old.brightness = Brightness::MediumDark;
+        old.toolbar_advanced = true;
+        old.dock_tab = DockTab::Properties;
+        old.shortcut_set = "Scorciatoie personali".into();
+        let upgraded = old.sanitized();
+        assert_eq!(upgraded.opendraw_classic_revision, 3);
+        assert_eq!(upgraded.workspace, "Classica");
+        assert_eq!(upgraded.brightness, Brightness::Light);
+        assert!(!upgraded.toolbar_advanced);
+        assert_eq!(upgraded.dock_tab, DockTab::Layers);
+        assert_eq!(upgraded.shortcut_set, "Scorciatoie personali");
+        let old = crate::workspaces::find(&upgraded, "Alpha 2 (layout precedente)").unwrap();
+        assert!(old.toolbar_advanced);
+        assert_eq!(old.dock_tab, DockTab::Properties);
+        let reloaded = upgraded.sanitized();
+        assert_eq!(reloaded.custom_workspaces.len(), 1);
     }
 
     #[test]
