@@ -50,7 +50,9 @@ impl Default for Workspace {
     }
 }
 
-pub const ESSENTIALS: &str = "Essentials";
+// The OpenDraw build starts in a familiar Corel-style layout. The upstream
+// workspace naming and behavior remain unchanged without the feature flag.
+pub const ESSENTIALS: &str = if cfg!(feature = "opendraw") { "Classica" } else { "Essentials" };
 
 /// Built-in workspaces, in Illustrator's menu order (Essentials first).
 pub fn builtins() -> Vec<Workspace> {
@@ -60,6 +62,35 @@ pub fn builtins() -> Vec<Workspace> {
         f(&mut x);
         x
     };
+    #[cfg(feature = "opendraw")]
+    {
+        return vec![
+            w(ESSENTIALS, &|_| {}),
+            w("Social e comunicazione", &|x| {
+                x.control_bar = true;
+                x.rulers = false;
+                x.toolbar_advanced = false;
+                x.dock_tab = DockTab::Layers;
+                x.open_panel = Some("align".into());
+            }),
+            w("Stampa e prestampa", &|x| {
+                x.control_bar = true;
+                x.rulers = true;
+                x.toolbar_advanced = true;
+                x.dock_tab = DockTab::Properties;
+                x.open_panel = Some("info".into());
+            }),
+            w("Disegno vettoriale", &|x| {
+                x.control_bar = true;
+                x.rulers = true;
+                x.toolbar_advanced = true;
+                x.toolbar_double = true;
+                x.dock_tab = DockTab::Layers;
+                x.open_panel = Some("stroke".into());
+            }),
+        ];
+    }
+    #[cfg(not(feature = "opendraw"))]
     vec![
         w(ESSENTIALS, &|_| {}),
         w("Essentials Classic", &|x| {
@@ -439,6 +470,7 @@ mod tests {
         assert_eq!(ui.workspace, ESSENTIALS);
     }
 
+    #[cfg(not(feature = "opendraw"))]
     #[test]
     fn apply_classic_then_reset_to_essentials_keeps_brightness() {
         let mut ui = UiState { brightness: crate::theme::Brightness::Light, ..Default::default() };
@@ -469,6 +501,7 @@ mod tests {
         assert_eq!(back.workspace, "Mine");
     }
 
+    #[cfg(not(feature = "opendraw"))]
     #[test]
     fn builtin_names_are_protected() {
         let mut ui = UiState::default();
@@ -483,11 +516,39 @@ mod tests {
         assert_eq!(ui.workspace, ESSENTIALS);
     }
 
+    #[cfg(not(feature = "opendraw"))]
     #[test]
     fn all_requested_workspaces_exist() {
         let ui = UiState::default();
         for n in ["Essentials", "Essentials Classic", "Painting", "Typography", "Layout", "Tracing", "Web", "Automation"] {
             assert!(find(&ui, n).is_some(), "{n}");
         }
+    }
+
+    #[cfg(feature = "opendraw")]
+    #[test]
+    fn opendraw_workspaces_are_selectable_and_keep_prefs() {
+        let mut ui = UiState::default();
+        let names = names(&ui);
+        assert_eq!(names, ["Classica", "Social e comunicazione", "Stampa e prestampa", "Disegno vettoriale"]);
+        assert_eq!(ui.workspace, "Classica");
+        assert!(ui.control_bar && ui.view.rulers && ui.toolbar_advanced);
+        assert_eq!(ui.dock_tab, DockTab::Layers);
+
+        ui.brightness = crate::theme::Brightness::Light;
+        ui.shortcut_overrides.insert("file.save".into(), "Ctrl+Alt+S".into());
+        for name in ["Social e comunicazione", "Stampa e prestampa", "Disegno vettoriale", "Classica"] {
+            let chosen = find(&ui, name).unwrap();
+            apply(&mut ui, &chosen);
+            assert_eq!(ui.workspace, name);
+            assert_eq!(ui.brightness, crate::theme::Brightness::Light);
+            assert_eq!(ui.shortcut_overrides["file.save"], "Ctrl+Alt+S");
+        }
+        assert!(save_as(&mut ui, "La mia impaginazione").is_ok());
+        assert_eq!(ui.workspace, "La mia impaginazione");
+        assert!(save_as(&mut ui, "Classica").is_err());
+        let saved: UiState = serde_json::from_value(serde_json::to_value(&ui).unwrap()).unwrap();
+        assert!(find(&saved, "La mia impaginazione").is_some());
+        assert_eq!(saved.workspace, "La mia impaginazione");
     }
 }
