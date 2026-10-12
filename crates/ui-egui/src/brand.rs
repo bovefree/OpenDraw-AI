@@ -2,12 +2,16 @@
 //! README). The PNG carries the icon's rounded corners; it is decoded once per context into a
 //! mipmapped texture, so it stays crisp from the 18 pt app-bar mark to the About box.
 
-use egui::{Color32, Context, Id, Rect, TextureHandle, TextureOptions, Ui, pos2};
+use egui::{Color32, Rect, Ui};
+#[cfg(not(feature = "opendraw"))]
+use egui::{Context, Id, TextureHandle, TextureOptions, pos2};
 
 /// 128 px: sharp at 44 pt on a 2× display, and the mipmaps keep 22 pt clean.
+#[cfg(not(feature = "opendraw"))]
 const ICON_PNG: &[u8] = include_bytes!("../../../assets/app-icon/hicolor/128x128/apps/ai.storyteller.vectorcraft.png");
 
 /// The icon's pixels (one transparent pixel if it couldn't be decoded, which a test rules out).
+#[cfg(not(feature = "opendraw"))]
 fn decode() -> egui::ColorImage {
     match image::load_from_memory_with_format(ICON_PNG, image::ImageFormat::Png) {
         Ok(img) => {
@@ -19,6 +23,7 @@ fn decode() -> egui::ColorImage {
 }
 
 /// The icon texture, uploaded on first use and kept in the context.
+#[cfg(not(feature = "opendraw"))]
 fn texture(ctx: &Context) -> TextureHandle {
     let id = Id::new("vectorcraft-brand-mark");
     if let Some(tex) = ctx.data(|d| d.get_temp::<TextureHandle>(id)) {
@@ -31,18 +36,32 @@ fn texture(ctx: &Context) -> TextureHandle {
 }
 
 /// Paint the mark into `r` (square).
+#[cfg(not(feature = "opendraw"))]
 pub fn paint_mark(ui: &Ui, r: Rect) {
     let uv = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
     ui.painter().image(texture(ui.ctx()).id(), r, uv, Color32::WHITE);
 }
 
+/// Original OpenDraw preview mark. No ArtCraft trademark assets are used.
+#[cfg(feature = "opendraw")]
+pub fn paint_mark(ui: &Ui, r: Rect) {
+    ui.painter().rect_filled(r, 4.0, Color32::from_rgb(22, 33, 47));
+    ui.painter().text(
+        r.center(),
+        egui::Align2::CENTER_CENTER,
+        "O",
+        egui::FontId::proportional(15.0),
+        Color32::from_rgb(81, 215, 193),
+    );
+}
+
 /// The mark's texture id (tests: find the painted marks among the shapes).
-#[cfg(test)]
+#[cfg(all(test, not(feature = "opendraw")))]
 pub fn texture_id(ctx: &Context) -> egui::TextureId {
     texture(ctx).id()
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(feature = "opendraw")))]
 mod tests {
     use super::*;
     use crate::VectorcraftApp;
