@@ -1261,9 +1261,7 @@ mod tests {
     fn right_click_tile(app: &mut VectorcraftApp, ctx: &egui::Context, name: &str, time: f64) {
         frame(app, ctx, vec![], time, show);
         let at = ctx.read_response(egui::Id::new(("swatch-tile", name))).unwrap_or_else(|| panic!("no tile for {name}")).rect.center();
-        let button = |pressed| Event::PointerButton {
-            pos: at, button: PointerButton::Secondary, pressed, modifiers: Modifiers::NONE,
-        };
+        let button = |pressed| Event::PointerButton { pos: at, button: PointerButton::Secondary, pressed, modifiers: Modifiers::NONE };
         frame(app, ctx, vec![Event::PointerMoved(at), button(true), button(false)], time + 0.5, show);
     }
 
