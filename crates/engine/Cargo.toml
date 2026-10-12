@@ -8,6 +8,10 @@ description = "VectorCraft engine: sessions, history, selection, the command reg
 [lints]
 workspace = true
 
+[features]
+# Early print checks are exposed in OpenDraw AI without altering default VectorCraft.
+opendraw = []
+
 [dependencies]
 vectorcraft-geom = { workspace = true }
 vectorcraft-color = { workspace = true }
