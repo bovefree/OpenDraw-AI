@@ -2021,7 +2021,7 @@ pub fn menu_tree() -> Vec<(&'static str, Vec<Item>)> {
 
 pub fn menu_tree_named(english_names: bool) -> Vec<(&'static str, Vec<Item>)> {
     let panel = |label: &'static str, id: &'static str| cp(label, "window.panel", json!({ "panel": id }));
-    vec![
+    let tree = vec![
         (
             // The application menu: About and Discord only. The in-window bar never shows it (File
             // is first there, as in Illustrator); on macOS `native_menu::mac_layout` composes the
@@ -2667,7 +2667,15 @@ pub fn menu_tree_named(english_names: bool) -> Vec<(&'static str, Vec<Item>)> {
                 c("About VectorCraft", "help.about"),
             ],
         ),
-    ]
+    ];
+    #[cfg(feature = "opendraw")]
+    {
+        crate::opendraw_shell::classic_menu_tree(tree)
+    }
+    #[cfg(not(feature = "opendraw"))]
+    {
+        tree
+    }
 }
 
 /// Object → Transform (also in the canvas context menu).
