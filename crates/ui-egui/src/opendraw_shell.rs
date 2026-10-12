@@ -148,16 +148,12 @@ pub fn property_bar(app: &mut VectorcraftApp, ui: &mut Ui) {
                     if selected > 0 {
                         ui.label(egui::RichText::new(if selected == 1 { "Oggetto" } else { "Oggetti" }).size(12.0).strong());
                         if let Some((center, width, height)) = bounds {
-                            for (key, label, value) in [
-                                ("x", "X", center.x),
-                                ("y", "Y", center.y),
-                                ("width", "L", width),
-                                ("height", "A", height),
-                            ] {
+                            for (key, label, value) in [("x", "X", center.x), ("y", "Y", center.y), ("width", "L", width), ("height", "A", height)] {
                                 ui.label(egui::RichText::new(label).size(11.0).color(t.text_dim));
                                 if let Some(next) = widgets::num_field(ui, ("opendraw-geometry", key), Some(value), units, 82.0) {
                                     let proportional = app.session.prefs.constrain_proportions;
-                                    if let Err(error) = app.run("object.setBounds", json!({key: next, "reference": 4, "proportional": proportional})) {
+                                    if let Err(error) = app.run("object.setBounds", json!({key: next, "reference": 4, "proportional": proportional}))
+                                    {
                                         app.ui.status = error;
                                     }
                                 }
