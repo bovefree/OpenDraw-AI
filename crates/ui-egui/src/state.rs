@@ -562,6 +562,21 @@ impl FloatingPanels {
 impl UiState {
     /// Clear transient state after loading saved preferences.
     pub fn sanitized(mut self) -> Self {
+        // The very first OpenDraw alpha used VectorCraft's "Essentials"
+        // layout. On upgrade, offer the new Classic workspace while retaining
+        // the user's previous panel arrangement as a named custom workspace.
+        // Do not touch other workspace choices or saved personal shortcuts.
+        #[cfg(feature = "opendraw")]
+        if self.workspace == "Essentials" && !self.custom_workspaces.iter().any(|w| w.name == "Essentials") {
+            let previous = "Alpha 1 (layout)";
+            if !self.custom_workspaces.iter().any(|w| w.name == previous) {
+                let original = crate::workspaces::capture(&self, previous);
+                self.custom_workspaces.push(original);
+            }
+            if let Some(classic) = crate::workspaces::find(&self, "Classica") {
+                crate::workspaces::apply(&mut self, &classic);
+            }
+        }
         self.dialog = None;
         self.flyout = None;
         self.tools_drawer = false;
@@ -673,6 +688,37 @@ fn default_workspace() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(feature = "opendraw")]
+    #[test]
+    fn migrating_alpha_one_workspace_preserves_old_layout_and_user_preferences() {
+        let mut previous = UiState::default();
+        previous.workspace = "Essentials".into();
+        previous.control_bar = false;
+        previous.toolbar_advanced = false;
+        previous.dock_tab = DockTab::Properties;
+        previous.brightness = Brightness::Light;
+        previous.shortcut_set = "VectorCraft Defaults".into();
+
+        let migrated = previous.sanitized();
+        assert_eq!(migrated.workspace, "Classica");
+        assert!(migrated.control_bar);
+        assert!(migrated.toolbar_advanced);
+        assert_eq!(migrated.dock_tab, DockTab::Layers);
+        assert_eq!(migrated.brightness, Brightness::Light);
+        assert_eq!(migrated.shortcut_set, "VectorCraft Defaults");
+
+        let saved = crate::workspaces::find(&migrated, "Alpha 1 (layout)").unwrap();
+        assert!(!saved.control_bar);
+        assert!(!saved.toolbar_advanced);
+        assert_eq!(saved.dock_tab, DockTab::Properties);
+
+        // Migration must happen only once, and must not override a chosen
+        // personal workspace on the next start.
+        let reloaded = migrated.sanitized();
+        assert_eq!(reloaded.custom_workspaces.len(), 1);
+        assert_eq!(reloaded.workspace, "Classica");
+    }
 
     #[test]
     fn zoom_steps() {

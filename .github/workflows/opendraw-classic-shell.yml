@@ -1,0 +1,45 @@
+name: OpenDraw Alpha 2 classic shell
+
+on:
+  push:
+    branches:
+      - opendraw/od-014-classic-shell
+  pull_request:
+    paths:
+      - '.github/workflows/opendraw-classic-shell.yml'
+      - 'crates/ui-egui/src/opendraw_shell.rs'
+      - 'crates/ui-egui/src/chrome.rs'
+      - 'crates/ui-egui/src/menus.rs'
+      - 'crates/ui-egui/src/lib.rs'
+      - 'docs/opendraw/CLASSIC_SHELL.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: classic-shell-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  shell:
+    name: Classic UI and upstream regressions
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.95.0'
+          components: rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Check OpenDraw classic menus and working commands
+        run: cargo test --locked -p vectorcraft-ui-egui --features opendraw classic_ --lib
+      - name: Test Alpha 1 to Classic workspace migration
+        run: cargo test --locked -p vectorcraft-ui-egui --features opendraw migrating_alpha_one_workspace_preserves_old_layout_and_user_preferences --lib
+      - name: Test OpenDraw menu/UI regressions
+        run: cargo test --locked -p vectorcraft-ui-egui --features opendraw menus::tests --lib
+      - name: Test untouched VectorCraft menu/UI behavior
+        run: cargo test --locked -p vectorcraft-ui-egui menus::tests --lib

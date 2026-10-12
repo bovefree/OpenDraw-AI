@@ -2021,7 +2021,7 @@ pub fn menu_tree() -> Vec<(&'static str, Vec<Item>)> {
 
 pub fn menu_tree_named(english_names: bool) -> Vec<(&'static str, Vec<Item>)> {
     let panel = |label: &'static str, id: &'static str| cp(label, "window.panel", json!({ "panel": id }));
-    vec![
+    let tree = vec![
         (
             // The application menu: About and Discord only. The in-window bar never shows it (File
             // is first there, as in Illustrator); on macOS `native_menu::mac_layout` composes the
@@ -2667,7 +2667,15 @@ pub fn menu_tree_named(english_names: bool) -> Vec<(&'static str, Vec<Item>)> {
                 c("About VectorCraft", "help.about"),
             ],
         ),
-    ]
+    ];
+    #[cfg(feature = "opendraw")]
+    {
+        crate::opendraw_shell::classic_menu_tree(tree)
+    }
+    #[cfg(not(feature = "opendraw"))]
+    {
+        tree
+    }
 }
 
 /// Object → Transform (also in the canvas context menu).
@@ -2846,7 +2854,7 @@ pub fn menu_bar(app: &mut VectorcraftApp, ui: &mut egui::Ui) -> f32 {
     let tree = menu_tree_named(app.session.prefs.font_names_in_english);
     // No application menu in the window (as in Illustrator): the bar starts at File on every
     // platform. The VectorCraft menu stays in the tree: the native Mac bar takes it from there.
-    let tree: Vec<(&str, Vec<Item>)> = tree.into_iter().filter(|(title, _)| *title != "VectorCraft").collect();
+    let tree: Vec<(&str, Vec<Item>)> = tree.into_iter().filter(|(title, _)| !matches!(*title, "VectorCraft" | "OpenDraw AI")).collect();
     let (end, open) = egui::MenuBar::new()
         .ui(ui, |ui| {
             let mut titles = Vec::with_capacity(tree.len());
@@ -3700,7 +3708,11 @@ mod tests {
         }
         let mut shown = vec![];
         out.shapes.iter().for_each(|c| texts(&c.shape, &mut shown));
-        let titles = ["File", "Edit", "Object", "Type", "Select", "Effect", "View", "Window", "Help"];
+        let titles: &[&str] = if cfg!(feature = "opendraw") {
+            &["File", "Modifica", "Visualizza", "Layout", "Oggetto", "Effetti", "Bitmap", "Testo", "Tabella", "Strumenti", "Finestra", "Aiuto"]
+        } else {
+            &["File", "Edit", "Object", "Type", "Select", "Effect", "View", "Window", "Help"]
+        };
         for t in titles {
             assert!(shown.iter().any(|s| s == t), "{t} missing from {shown:?}");
         }
@@ -3717,7 +3729,8 @@ mod tests {
         let titles = bar_frame(&mut app, &ctx, vec![]);
         // No application menu in the window: the bar starts at File on every platform.
         assert_eq!(titles.len(), menu_tree().len() - 1);
-        let (file, edit, object) = (titles[0].0.center(), titles[1].0.center(), titles[2].0.center());
+        let object_index = if cfg!(feature = "opendraw") { 4 } else { 2 };
+        let (file, edit, object) = (titles[0].0.center(), titles[1].0.center(), titles[object_index].0.center());
         let frames = |app: &mut VectorcraftApp, events: Vec<egui::Event>| {
             let mut t = bar_frame(app, &ctx, events);
             for _ in 0..2 {
@@ -3739,7 +3752,7 @@ mod tests {
         let t = frames(&mut app, vec![egui::Event::PointerMoved(edit)]);
         assert_eq!(open_titles(&ctx, &t), vec![1], "hovering Edit opens it and closes File");
         let t = frames(&mut app, vec![egui::Event::PointerMoved(object)]);
-        assert_eq!(open_titles(&ctx, &t), vec![2], "hovering Object opens it and closes Edit");
+        assert_eq!(open_titles(&ctx, &t), vec![object_index], "hovering Object opens it and closes Edit");
 
         // A pointer resting on a title doesn't switch: File opened another way (the keyboard)
         // stays open while the pointer stays still over Object.
@@ -3785,9 +3798,11 @@ mod tests {
         ] {
             assert!(shows_a_name(id, label), "{id} {label}");
         }
-        for (id, label) in [("object.group", "Group"), ("window.workspace", "Essentials"), ("effect.apply", "Drop Shadow")] {
+        for (id, label) in [("object.group", "Group"), ("effect.apply", "Drop Shadow")] {
             assert!(!shows_a_name(id, label), "{id} {label}");
         }
+        // In OpenDraw, Essentials is no longer a built-in workspace name.
+        assert_eq!(shows_a_name("window.workspace", "Essentials"), cfg!(feature = "opendraw"));
     }
 
     #[test]
@@ -4054,7 +4069,7 @@ mod tests {
         app.run("file.new", json!({})).unwrap();
         for cmd in ["imageTrace.make", "imageTrace.makeAndExpand"] {
             let e = menu_entries(&app).into_iter().find(|e| e.command.as_deref() == Some(cmd)).unwrap();
-            assert_eq!(e.path, ["Object", "Image Trace"]);
+            assert_eq!(e.path, [if cfg!(feature = "opendraw") { "Oggetto" } else { "Object" }, "Image Trace"]);
             assert_eq!(click_target(&e.label, cmd, &e.params), (cmd.to_string(), json!({"preset": "Default"})), "{}", e.label);
         }
     }
@@ -4065,7 +4080,7 @@ mod tests {
         app.run("file.new", json!({})).unwrap();
         let paths: Vec<Vec<String>> =
             menu_entries(&app).into_iter().filter(|e| e.command.as_deref() == Some("effect.expandAppearance")).map(|e| e.path).collect();
-        assert_eq!(paths, [vec!["Object".to_string()]]);
+        assert_eq!(paths, [vec![if cfg!(feature = "opendraw") { "Oggetto" } else { "Object" }.to_string()]]);
     }
 
     #[test]
@@ -4100,7 +4115,7 @@ mod tests {
         let ctx = egui::Context::default();
         crate::theme::install_fonts(&ctx);
         let tree = menu_tree();
-        let (_, window) = tree.iter().find(|(t, _)| *t == "Window").unwrap();
+        let (_, window) = tree.iter().find(|(t, _)| *t == if cfg!(feature = "opendraw") { "Finestra" } else { "Window" }).unwrap();
         let id = egui::Id::new("test-long-menu");
         let rect = |height: f32| {
             let screen = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(1200.0, height));
