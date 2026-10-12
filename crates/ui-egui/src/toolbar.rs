@@ -95,7 +95,10 @@ pub(crate) fn slots(app: &VectorcraftApp) -> Vec<(Option<&'static str>, Vec<&'st
     } else {
         #[cfg(feature = "opendraw")]
         {
-            CLASSIC.iter().flat_map(|(cat, ss)| ss.iter().enumerate().map(move |(i, s)| (if i == 0 { Some(*cat) } else { None }, s.to_vec()))).collect()
+            CLASSIC
+                .iter()
+                .flat_map(|(cat, ss)| ss.iter().enumerate().map(move |(i, s)| (if i == 0 { Some(*cat) } else { None }, s.to_vec())))
+                .collect()
         }
         #[cfg(not(feature = "opendraw"))]
         {
