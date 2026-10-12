@@ -1,0 +1,40 @@
+name: OpenDraw print preflight
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/opendraw-preflight.yml'
+      - 'crates/engine/src/cmd/preflight.rs'
+      - 'crates/engine/src/cmd/mod.rs'
+      - 'crates/engine/Cargo.toml'
+      - 'crates/ui-egui/Cargo.toml'
+      - 'docs/opendraw/PREFLIGHT.md'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preflight:
+    name: Print preflight and non-OpenDraw regressions
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.95.0'
+          components: rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: Check code formatting
+        run: cargo fmt --all -- --check
+      - name: Check OpenDraw print reports
+        run: cargo test --locked -p vectorcraft-engine --features opendraw --lib preflight::tests
+      - name: Preserve existing document preset behavior
+        run: cargo test --locked -p vectorcraft-engine --lib newdoc
