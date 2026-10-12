@@ -298,9 +298,14 @@ pub fn classic_dock(app: &mut VectorcraftApp, ui: &mut Ui) {
             ui.horizontal(|ui| {
                 ui.label(egui::RichText::new(tab.info().1).size(13.0).strong());
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui.small_button("⋯").on_hover_text("Apri altri pannelli").clicked() {
-                        app.ui.dock_tab = DockTab::Properties;
-                    }
+                    ui.menu_button("⋯", |ui| {
+                        for choice in [DockTab::Layers, DockTab::Properties, DockTab::Libraries] {
+                            if ui.selectable_label(app.ui.dock_tab == choice, choice.info().1).clicked() {
+                                app.ui.dock_tab = choice;
+                                ui.close();
+                            }
+                        }
+                    });
                 });
             });
             ui.separator();
