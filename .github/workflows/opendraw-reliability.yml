@@ -1,0 +1,40 @@
+name: OpenDraw reliability and stress
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/opendraw-reliability.yml'
+      - 'crates/engine/src/tests_opendraw_stress.rs'
+      - 'crates/engine/src/lib.rs'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: \${{ github.workflow }}-\${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  reliability:
+    name: Synthetic reliability and regression tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.95.0'
+          components: rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: Check Rust formatting
+        run: cargo fmt --all -- --check
+      - name: Check synthetic save recovery and rollback
+        run: cargo test --locked -p vectorcraft-engine --lib tests_opendraw_stress::
+      - name: Check existing atomic save and recovery paths
+        run: |
+          cargo test --locked -p vectorcraft-engine --lib saving_writes_through_a_temporary_file
+          cargo test --locked -p vectorcraft-engine --lib a_crash_leaves_copies_that_restore_modified_and_titled
+      # The 2000-object timing benchmark is ignored, not a CI performance gate.
