@@ -435,6 +435,8 @@ pub const CATEGORIES: &[Category] = &[
             ("Legal", 612.0, 1008.0, PT),
             ("Tabloid", 792.0, 1224.0, PT),
             ("A3", 297.0, 420.0, MM),
+            // OpenDraw AI: large-format poster at its full physical dimensions.
+            ("OpenDraw Manifesto 140×200 cm", 1400.0, 2000.0, MM),
             ("A4", 210.0, 297.0, MM),
             ("A5", 148.0, 210.0, MM),
             ("B4", 250.0, 353.0, MM),
@@ -514,6 +516,9 @@ fn builtin(c: &Category, general: Unit) -> impl Iterator<Item = DocSettings> + '
         units: if units == Unit::Pixels { units } else { general },
         color_mode,
         raster_effects_ppi: ppi,
+        // Five millimetres on every side is a starting point for the large-format
+        // preset; the final bleed requirement must be confirmed with the printer.
+        bleed: if name == "OpenDraw Manifesto 140×200 cm" { [MM.to_pt(5.0); 4] } else { [0.0; 4] },
         ..DocSettings::default()
     })
 }
@@ -633,4 +638,26 @@ fn delete(s: &mut Session, p: &Value) -> Result<Value> {
     let saved = &mut s.prefs.new_doc_presets;
     let i = saved.iter().position(|q| q.name.eq_ignore_ascii_case(name)).ok_or_else(|| bad(C, format!("no saved preset called `{name}`")))?;
     Ok(json!({ "deleted": saved.remove(i).name }))
+}
+
+#[cfg(test)]
+mod opendraw_tests {
+    use super::*;
+
+    #[test]
+    fn poster_print_preset_has_physical_dimensions_cmyk_and_bleed() {
+        let print = CATEGORIES.iter().find(|c| c.0 == "Print").unwrap();
+        let poster = builtin(print, Unit::Millimeters).find(|p| p.name == "OpenDraw Manifesto 140×200 cm").unwrap();
+        assert!((poster.width - MM.to_pt(1400.0)).abs() < 1e-6);
+        assert!((poster.height - MM.to_pt(2000.0)).abs() < 1e-6);
+        assert_eq!(poster.units, Unit::Millimeters);
+        assert_eq!(poster.color_mode, ColorMode::Cmyk);
+        assert_eq!(poster.raster_effects_ppi, 300.0);
+        for side in poster.bleed {
+            assert!((side - MM.to_pt(5.0)).abs() < 1e-6);
+        }
+        // Other print presets retain their original zero-bleed default.
+        let a4 = builtin(print, Unit::Millimeters).find(|p| p.name == "A4").unwrap();
+        assert_eq!(a4.bleed, [0.0; 4]);
+    }
 }
