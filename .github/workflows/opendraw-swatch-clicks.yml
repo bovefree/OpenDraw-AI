@@ -1,0 +1,34 @@
+name: OpenDraw swatch mouse controls
+
+on:
+  push:
+    branches:
+      - opendraw/od-012-swatch-clicks
+  pull_request:
+    paths:
+      - '.github/workflows/opendraw-swatch-clicks.yml'
+      - 'crates/ui-egui/src/panels/swatches.rs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  swatches:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.95.0'
+          components: rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Test Corel-style left and right clicks
+        run: cargo test --locked -p vectorcraft-ui-egui --features opendraw opendraw_swatch_primary_sets_fill_secondary_sets_stroke --lib
+      - name: Test existing Swatches UI in OpenDraw
+        run: cargo test --locked -p vectorcraft-ui-egui --features opendraw panels::swatches::tests --lib
+      - name: Test existing Swatches UI in VectorCraft
+        run: cargo test --locked -p vectorcraft-ui-egui panels::swatches::tests --lib
