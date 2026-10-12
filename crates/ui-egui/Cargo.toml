@@ -10,7 +10,7 @@ workspace = true
 
 [features]
 # OpenDraw AI preview UI; the default build remains unmodified VectorCraft.
-opendraw = []
+opendraw = ["vectorcraft-tools/opendraw"]
 
 [dependencies]
 craft-ui = { workspace = true }
