@@ -160,10 +160,21 @@ fn swatch_params(e: &Entry) -> Option<Value> {
     })
 }
 
-/// Apply a clicked swatch to the active proxy (Alt: the inactive one).
-fn apply(app: &mut VectorcraftApp, ui: &Ui, e: &Entry) {
-    if let Some(params) = swatch_params(e) {
-        super::apply_click(app, ui, params);
+/// In OpenDraw, left-click paints fill and right-click paints stroke, as in
+/// CorelDRAW. The original VectorCraft proxy/Alt behavior stays unchanged.
+fn apply(app: &mut VectorcraftApp, ui: &Ui, e: &Entry, stroke: bool) {
+    if let Some(mut params) = swatch_params(e) {
+        #[cfg(feature = "opendraw")]
+        {
+            // Do not change which proxy is active when simply assigning a colour.
+            params["focus"] = json!(false);
+            app.run(if stroke { "paint.setStroke" } else { "paint.setFill" }, params).ok();
+        }
+        #[cfg(not(feature = "opendraw"))]
+        {
+            let _ = stroke;
+            super::apply_click(app, ui, params);
+        }
     }
 }
 
@@ -402,7 +413,7 @@ fn drag_of(e: &Entry, names: Vec<String>) -> PanelDrag {
 /// What the tiles or rows saw this frame.
 #[derive(Default)]
 struct TileEvents {
-    clicked: Option<(Entry, egui::Modifiers)>,
+    clicked: Option<(Entry, egui::Modifiers, bool)>,
     /// Double-click opens the swatch's editor (Swatch Options, Gradient panel or pattern editing),
     /// or Edit or Apply Color Group on a colour group.
     edit: Option<Entry>,
@@ -437,7 +448,11 @@ fn tile_input(ui: &Ui, resp: Response, e: &Entry, items: &[Entry], sel: &[String
         _ => resp.on_hover_text(name),
     };
     if resp.clicked() {
-        ev.clicked = Some((e.clone(), ui.input(|i| i.modifiers)));
+        ev.clicked = Some((e.clone(), ui.input(|i| i.modifiers), false));
+    }
+    #[cfg(feature = "opendraw")]
+    if resp.secondary_clicked() && !e.is_folder() {
+        ev.clicked = Some((e.clone(), ui.input(|i| i.modifiers), true));
     }
 }
 
@@ -714,15 +729,22 @@ fn body(app: &mut VectorcraftApp, ui: &mut Ui, salt: &'static str) {
         apply_drop(app, drop);
     }
     let selected = match ev.clicked {
-        Some((e, m)) => {
-            let order: Vec<&str> = items.iter().map(Entry::name).collect();
-            let sel = click_selection(ui, "swatch-anchor", selected, &order, e.name(), m);
-            set_pstate(ui.ctx(), "swatch-selected", sel.clone());
-            // A plain click also applies the swatch; modifier clicks only select.
-            if !(m.shift || m.command) {
-                apply(app, ui, &e);
+        Some((e, m, stroke)) => {
+            if stroke {
+                // Right-click paints the outline but does not modify the
+                // swatch list's current selection.
+                apply(app, ui, &e, true);
+                selected
+            } else {
+                let order: Vec<&str> = items.iter().map(Entry::name).collect();
+                let sel = click_selection(ui, "swatch-anchor", selected, &order, e.name(), m);
+                set_pstate(ui.ctx(), "swatch-selected", sel.clone());
+                // Modifier clicks only select swatches; ordinary clicks paint.
+                if !(m.shift || m.command) {
+                    apply(app, ui, &e, false);
+                }
+                sel
             }
-            sel
         }
         None => selected,
     };
