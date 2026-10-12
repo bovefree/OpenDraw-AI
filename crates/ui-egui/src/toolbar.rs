@@ -14,7 +14,7 @@ use crate::theme::{self, Tokens};
 use crate::{VectorcraftApp, icons, widgets};
 
 const PITCH: f32 = 30.0;
-const WIDTH: f32 = 48.0;
+const WIDTH: f32 = if cfg!(feature = "opendraw") { 34.0 } else { 48.0 };
 /// Seconds a press on a tool group's button is held before its flyout opens.
 const LONG_PRESS: f64 = 0.35;
 /// Width of the grab bar down a flyout's right side: dragging it tears the flyout off.
@@ -63,6 +63,21 @@ pub const BASIC: &[(&str, &[&[&str]])] = &[
     ("Color", &[&["gradient", "mesh"], &["eyedropper", "measure"]]),
 ];
 
+/// Compact Corel-style working order. All buttons are real engine tools:
+/// the source application icons are not copied. A long press exposes variants.
+#[cfg(feature = "opendraw")]
+pub const CLASSIC: &[(&str, &[&[&str]])] = &[
+    ("Puntatore", &[&["selection"], &["directSelection", "groupSelection"]]),
+    ("Ritaglia", &[&[vectorcraft_tools::cropimage::ID, "knife", "scissors"]]),
+    ("Zoom", &[&["zoom", "hand"]]),
+    ("Disegno", &[&["pencil", "smooth", "pen", "curvature"], &["paintbrush", "blobBrush"]]),
+    ("Forme", &[&["rectangle", "roundedRectangle"], &["ellipse"], &["polygon", "star"]]),
+    ("Testo", &[&["type", "areaType", "typeOnPath"]]),
+    ("Modifica", &[&["lineSegment", "arc"], &["eraser", "pathEraser"]]),
+    ("Colore", &[&["eyedropper"], &["gradient", "mesh"]]),
+    ("Naviga", &[&["hand"], &["artboard"]]),
+];
+
 pub(crate) fn tip(t: &ToolInfo) -> String {
     match crate::shortcut_editor::tool_shortcut(t.id) {
         Some(s) => format!("{} ({})", tl!(t.label), s),
@@ -78,7 +93,14 @@ pub(crate) fn slots(app: &VectorcraftApp) -> Vec<(Option<&'static str>, Vec<&'st
     } else if app.ui.toolbar_advanced {
         TOOL_GROUPS.iter().map(|g| (None, g.iter().map(|t| t.id).collect())).collect()
     } else {
-        BASIC.iter().flat_map(|(cat, ss)| ss.iter().enumerate().map(move |(i, s)| (if i == 0 { Some(*cat) } else { None }, s.to_vec()))).collect()
+        #[cfg(feature = "opendraw")]
+        {
+            CLASSIC.iter().flat_map(|(cat, ss)| ss.iter().enumerate().map(move |(i, s)| (if i == 0 { Some(*cat) } else { None }, s.to_vec()))).collect()
+        }
+        #[cfg(not(feature = "opendraw"))]
+        {
+            BASIC.iter().flat_map(|(cat, ss)| ss.iter().enumerate().map(move |(i, s)| (if i == 0 { Some(*cat) } else { None }, s.to_vec()))).collect()
+        }
     }
 }
 
