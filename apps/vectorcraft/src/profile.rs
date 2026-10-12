@@ -49,9 +49,10 @@ mod tests {
 
     #[test]
     fn isolated_profile_has_no_legacy_fallback_on_any_platform() {
+        let override_key = if cfg!(feature = "opendraw") { "OPENDRAW_CONFIG_DIR" } else { "VECTORCRAFT_CONFIG_DIR" };
         for os in ["macos", "windows", "linux"] {
             let env = |key: &str| {
-                if key == if cfg!(feature = "opendraw") { "OPENDRAW_CONFIG_DIR" } else { "VECTORCRAFT_CONFIG_DIR" } {
+                if key == override_key {
                     Some("/isolated".into())
                 } else {
                     environment(key)
@@ -64,8 +65,9 @@ mod tests {
 
     #[test]
     fn empty_override_does_not_fall_back_to_user_files() {
+        let override_key = if cfg!(feature = "opendraw") { "OPENDRAW_CONFIG_DIR" } else { "VECTORCRAFT_CONFIG_DIR" };
         let env = |key: &str| {
-            if key == if cfg!(feature = "opendraw") { "OPENDRAW_CONFIG_DIR" } else { "VECTORCRAFT_CONFIG_DIR" } {
+            if key == override_key {
                 Some(OsString::new())
             } else {
                 environment(key)
