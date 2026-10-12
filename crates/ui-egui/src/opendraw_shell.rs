@@ -149,7 +149,7 @@ pub fn color_strip(app: &mut VectorcraftApp, ui: &mut Ui) {
     let swatches: Vec<(String, Paint)> = app
         .session
         .active()
-        .map(|st| st.doc.swatches.iter().filter(|s| !s.paint.is_gradient() && !s.paint.is_pattern()).map(|s| (s.name.clone(), s.paint.clone())).collect())
+        .map(|st| st.doc.swatches.iter().filter(|s| matches!(s.paint, Paint::None | Paint::Solid { .. })).map(|s| (s.name.clone(), s.paint.clone())).collect())
         .unwrap_or_default();
     egui::Panel::right("opendraw_color_strip")
         .exact_size(39.0)
@@ -187,7 +187,7 @@ mod tests {
 
     #[test]
     fn classic_menus_offer_working_commands_and_expose_missing_tables() {
-        let tree = classic_menu_tree(menus::menu_tree_named(false));
+        let tree = menus::menu_tree_named(false);
         let names: Vec<_> = tree.iter().map(|(name, _)| *name).collect();
         // Running the transformation twice is not supported; upstream menu
         // tree is transformed exactly once by menu_tree_named when enabled.
@@ -204,7 +204,7 @@ mod tests {
         let id = s.execute("shape.rectangle", &json!({"x":10,"y":10,"width":20,"height":20})).unwrap()["id"].clone();
         s.execute("select.set", &json!({"ids":[id]})).unwrap();
         for cmd in ["paint.setFill", "paint.setStroke"] {
-            let result = s.execute(cmd, &json!({"color":{"model":"rgb","r":255,"g":0,"b":0}}));
+            let result = s.execute(cmd, &json!({"swatch":"Red"}));
             assert!(result.is_ok(), "{cmd}: {result:?}");
         }
     }
