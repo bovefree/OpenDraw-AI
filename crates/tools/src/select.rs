@@ -13,9 +13,9 @@
 //! scaling its type: the text reflows at its size.
 
 use serde_json::{Value, json};
-use vectorcraft_doc::hit::{hit_test, marquee, objects_at};
 #[cfg(feature = "opendraw")]
 use vectorcraft_doc::hit::marquee_enclosed;
+use vectorcraft_doc::hit::{hit_test, marquee, objects_at};
 use vectorcraft_doc::{NodeId, OrientedBox};
 use vectorcraft_geom::{Affine, Point, Rect, Vec2};
 
@@ -440,8 +440,7 @@ impl Tool for SelectionTool {
                 // OpenDraw AI mirrors Corel's Pick tool: fully enclosed by default;
                 // Alt selects objects touched by the box. Upstream preserves touch selection.
                 #[cfg(feature = "opendraw")]
-                let ids: Vec<NodeId> =
-                    if m.alt { marquee(cx.doc, r, cx.isolation, false) } else { marquee_enclosed(cx.doc, r, cx.isolation, false) };
+                let ids: Vec<NodeId> = if m.alt { marquee(cx.doc, r, cx.isolation, false) } else { marquee_enclosed(cx.doc, r, cx.isolation, false) };
                 #[cfg(not(feature = "opendraw"))]
                 let ids: Vec<NodeId> = marquee(cx.doc, r, cx.isolation, false);
                 vec![Action::Exec(if toggle { "select.toggle" } else { "select.set" }.into(), json!({ "ids": json_ids(&ids) }))]
