@@ -1,6 +1,6 @@
 # Native OpenDraw AI identity builds; experimental and unsigned.
 # These builds add an independent application name, original generated mark and isolated preferences.
-name: OpenDraw Alpha 2 preview
+name: OpenDraw Alpha 3 Corel desktop preview
 
 on:
   pull_request:
@@ -32,7 +32,7 @@ jobs:
       - run: cargo fmt --all -- --check
 
   windows:
-    name: Windows x64 OpenDraw AI Alpha 2
+    name: Windows x64 OpenDraw AI Alpha 3
     runs-on: windows-latest
     timeout-minutes: 120
     needs: format
@@ -55,18 +55,18 @@ jobs:
           foreach ($file in @('LICENSE-MIT','LICENSE-APACHE','NOTICE')) {
             if (Test-Path $file) { Copy-Item $file 'dist/OpenDrawAI-windows-x64/' }
           }
-          'OpenDraw AI Alpha 2 portable preview - unsigned test build. The original editable format remains .vectorcraft. CDR import is NOT available. Use copies of your files.' |
+          'OpenDraw AI Alpha 3 Corel-layout portable preview - unsigned test build. The original editable format remains .vectorcraft. CDR import is NOT available. Use copies of your files.' |
             Set-Content -Encoding UTF8 'dist/OpenDrawAI-windows-x64/READ_FIRST.txt'
-          Compress-Archive -Path 'dist/OpenDrawAI-windows-x64/*' -DestinationPath 'dist/OpenDrawAI-windows-x64-alpha2.zip' -Force
+          Compress-Archive -Path 'dist/OpenDrawAI-windows-x64/*' -DestinationPath 'dist/OpenDrawAI-windows-x64-alpha3.zip' -Force
       - uses: actions/upload-artifact@v4
         with:
-          name: OpenDrawAI-windows-x64-alpha2
-          path: dist/OpenDrawAI-windows-x64-alpha2.zip
+          name: OpenDrawAI-windows-x64-alpha3
+          path: dist/OpenDrawAI-windows-x64-alpha3.zip
           retention-days: 14
           if-no-files-found: error
 
   macos:
-    name: macOS Apple Silicon OpenDraw AI Alpha 2
+    name: macOS Apple Silicon OpenDraw AI Alpha 3
     runs-on: macos-15
     timeout-minutes: 120
     needs: format
@@ -98,7 +98,7 @@ jobs:
             <key>CFBundleDisplayName</key><string>OpenDraw AI</string>
             <key>CFBundleExecutable</key><string>OpenDrawAI</string>
             <key>CFBundlePackageType</key><string>APPL</string>
-            <key>CFBundleShortVersionString</key><string>0.2.0</string>
+            <key>CFBundleShortVersionString</key><string>0.3.0</string>
             <key>CFBundleVersion</key><string>1</string>
             <key>LSMinimumSystemVersion</key><string>11.0</string>
             <key>NSHighResolutionCapable</key><true/>
@@ -109,12 +109,12 @@ jobs:
           codesign --verify --strict --deep "$APP"
           ditto "$APP" "dist/stage/OpenDraw AI.app"
           cp LICENSE-MIT LICENSE-APACHE dist/stage/
-          printf '%s\n' 'OpenDraw AI Alpha 2: ad-hoc signed, NOT Apple-notarized. For local testing only. Use document copies, not originals.' 'CDR import is NOT supported.' > dist/stage/READ_FIRST.txt
-          ditto -c -k --keepParent dist/stage dist/OpenDrawAI-macos-arm64-alpha2.zip
+          printf '%s\n' 'OpenDraw AI Alpha 3: ad-hoc signed, NOT Apple-notarized. For local testing only. Use document copies, not originals.' 'CDR import is NOT supported.' > dist/stage/READ_FIRST.txt
+          ditto -c -k --keepParent dist/stage dist/OpenDrawAI-macos-arm64-alpha3.zip
           lipo -info "$APP/Contents/MacOS/OpenDrawAI"
       - uses: actions/upload-artifact@v4
         with:
-          name: OpenDrawAI-macos-arm64-alpha2
-          path: dist/OpenDrawAI-macos-arm64-alpha2.zip
+          name: OpenDrawAI-macos-arm64-alpha3
+          path: dist/OpenDrawAI-macos-arm64-alpha3.zip
           retention-days: 14
           if-no-files-found: error
