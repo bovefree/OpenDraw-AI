@@ -364,9 +364,9 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
         "",
         "{} opens the Save PDF dialog; with params = document.exportPdf options written to path (asked when missing; viewAfterSaving opens the file) → {path, bytes, warnings}",
     ),
-    ("help.about", "About VectorCraft", "", "{}"),
+    ("help.about", if cfg!(feature = "opendraw") { "Informazioni su OpenDraw AI" } else { "About VectorCraft" }, "", "{}"),
     ("help.commandPalette", "Search Commands…", "Cmd+Shift+/", "{}"),
-    ("app.quit", "Quit VectorCraft", "Cmd+Q", "{}"),
+    ("app.quit", if cfg!(feature = "opendraw") { "Esci da OpenDraw AI" } else { "Quit VectorCraft" }, "Cmd+Q", "{}"),
     (
         "ui.swatchOptions",
         "Swatch Options…",
