@@ -126,6 +126,97 @@ pub fn command_bar(app: &mut VectorcraftApp, ui: &mut Ui) {
         });
 }
 
+/// Native OpenDraw property bar, modelled on the space and workflow in the
+/// CorelDRAW 2026 reference. Fields write to editable vectors through the
+/// existing document engine; nothing is a fake display-only input.
+pub fn property_bar(app: &mut VectorcraftApp, ui: &mut Ui) {
+    let t = Tokens::get(ui.ctx());
+    let units = app.session.general_unit();
+    let selected = app.session.active().map_or(0, |st| st.selection.objects.len());
+    let bounds = app.selection_box().map(|b| (b.center(), b.rect.width(), b.rect.height()));
+    let page = app.session.active().and_then(|st| {
+        let index = app.view().map_or(0, |v| v.artboard);
+        st.doc.artboards.get(index).map(|a| (a.rect.width(), a.rect.height()))
+    });
+
+    egui::Panel::top("opendraw_classic_properties")
+        .exact_size(43.0)
+        .frame(egui::Frame::NONE.fill(t.panel).inner_margin(egui::Margin::symmetric(8, 5)).stroke(Stroke::new(1.0, t.border)))
+        .show(ui, |ui| {
+            egui::ScrollArea::horizontal().auto_shrink([false, true]).show(ui, |ui| {
+                ui.horizontal_centered(|ui| {
+                    if selected > 0 {
+                        ui.label(egui::RichText::new(if selected == 1 { "Oggetto" } else { "Oggetti" }).size(12.0).strong());
+                        if let Some((center, width, height)) = bounds {
+                            for (key, label, value) in [
+                                ("x", "X", center.x),
+                                ("y", "Y", center.y),
+                                ("width", "L", width),
+                                ("height", "A", height),
+                            ] {
+                                ui.label(egui::RichText::new(label).size(11.0).color(t.text_dim));
+                                if let Some(next) = widgets::num_field(ui, ("opendraw-geometry", key), Some(value), units, 82.0) {
+                                    let proportional = app.session.prefs.constrain_proportions;
+                                    if let Err(error) = app.run("object.setBounds", json!({key: next, "reference": 4, "proportional": proportional})) {
+                                        app.ui.status = error;
+                                    }
+                                }
+                            }
+                            crate::panels::transform::constrain_link(app, ui);
+                        }
+                        ui.separator();
+                        if ui.button("Ruota…").clicked() {
+                            crate::menus::invoke(app, "object.rotate", json!({}));
+                        }
+                        ui.separator();
+                        ui.label("Riempimento");
+                        crate::panels::paint_chip(app, ui, false, 21.0, true);
+                        ui.label("Contorno");
+                        crate::panels::paint_chip(app, ui, true, 21.0, true);
+                        if ui.button("Oggetti").clicked() {
+                            app.ui.dock_tab = crate::state::DockTab::Layers;
+                        }
+                    } else {
+                        ui.label(egui::RichText::new("Pagina").size(12.0).strong());
+                        if let Some((width, height)) = page {
+                            ui.label("L");
+                            ui.add_enabled(false, egui::Label::new(format!("{:.1} mm", width / vectorcraft_doc::Unit::Millimeters.points())));
+                            ui.label("A");
+                            ui.add_enabled(false, egui::Label::new(format!("{:.1} mm", height / vectorcraft_doc::Unit::Millimeters.points())));
+                        }
+                        if ui.button("Imposta pagina…").clicked() {
+                            crate::menus::invoke(app, "file.documentSetup", json!({}));
+                        }
+                        ui.separator();
+                        ui.label("Unità");
+                        egui::ComboBox::from_id_salt("opendraw-units").width(110.0).selected_text(units.suffix()).show_ui(ui, |ui| {
+                            for unit in [
+                                vectorcraft_doc::Unit::Millimeters,
+                                vectorcraft_doc::Unit::Centimeters,
+                                vectorcraft_doc::Unit::Points,
+                                vectorcraft_doc::Unit::Inches,
+                                vectorcraft_doc::Unit::Pixels,
+                            ] {
+                                if ui.selectable_label(units == unit, unit.label()).clicked() {
+                                    if let Err(error) = app.run("document.setUnits", json!({"units":unit.label()})) {
+                                        app.ui.status = error;
+                                    }
+                                }
+                            }
+                        });
+                        ui.separator();
+                        if ui.button("Oggetti").clicked() {
+                            app.ui.dock_tab = crate::state::DockTab::Layers;
+                        }
+                        if ui.button("Proprietà").clicked() {
+                            app.ui.dock_tab = crate::state::DockTab::Properties;
+                        }
+                    }
+                });
+            });
+        });
+}
+
 /// Colour strip on the outer edge of the window, beside the objects dock.
 /// Left click sets fill; right click sets outline. Swatches are *document
 /// swatches*, so named/spot/process colours retain their meaning.
