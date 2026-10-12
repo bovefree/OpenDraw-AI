@@ -255,6 +255,67 @@ pub fn page_bar(app: &mut VectorcraftApp, ui: &mut Ui) {
         });
 }
 
+/// Corel-style Objects docker for the Classic workspace. Keeps the real
+/// hierarchy, selection and layer commands; the upstream Illustrator-style
+/// tab/icon dock remains available in the other workspaces.
+pub fn classic_dock(app: &mut VectorcraftApp, ui: &mut Ui) {
+    use crate::state::DockTab;
+
+    let t = Tokens::get(ui.ctx());
+    // The right-hand vertical strip is not ornamental: it opens functional
+    // panels, with Objects selected on first launch.
+    egui::Panel::right("opendraw_classic_rail")
+        .exact_size(29.0)
+        .frame(egui::Frame::NONE.fill(t.panel).inner_margin(egui::Margin::symmetric(2, 5)).stroke(Stroke::new(1.0, t.border)))
+        .show(ui, |ui| {
+            ui.vertical_centered(|ui| {
+                for (tab, label) in [
+                    (DockTab::Layers, "O"),
+                    (DockTab::Properties, "P"),
+                    (DockTab::Libraries, "L"),
+                ] {
+                    if ui.selectable_label(app.ui.dock_tab == tab, label).on_hover_text(tab.info().1).clicked() {
+                        app.ui.dock_tab = tab;
+                    }
+                    ui.add_space(9.0);
+                }
+                ui.separator();
+                if ui.small_button("C").on_hover_text("Colore").clicked() {
+                    if let Err(error) = app.run("window.panel", json!({"panel":"color"})) {
+                        app.ui.status = error;
+                    }
+                }
+            });
+        });
+
+    egui::Panel::right("opendraw_classic_dock")
+        .resizable(true)
+        .default_size(298.0)
+        .size_range(250.0..=510.0)
+        .frame(egui::Frame::NONE.fill(t.panel).stroke(Stroke::new(1.0, t.border)).inner_margin(egui::Margin::symmetric(8, 5)))
+        .show(ui, |ui| {
+            let tab = app.ui.dock_tab;
+            ui.horizontal(|ui| {
+                ui.label(egui::RichText::new(tab.info().1).size(13.0).strong());
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui.small_button("⋯").on_hover_text("Apri altri pannelli").clicked() {
+                        app.ui.dock_tab = DockTab::Properties;
+                    }
+                });
+            });
+            ui.separator();
+            match tab {
+                DockTab::Layers => crate::panels::layers::show(app, ui),
+                DockTab::Properties => {
+                    egui::ScrollArea::vertical().id_salt("opendraw-classic-properties").auto_shrink([false, false]).show(ui, |ui| {
+                        crate::panels::properties::show(app, ui);
+                    });
+                }
+                DockTab::Libraries => crate::panels::libraries(app, ui),
+            }
+        });
+}
+
 /// Colour strip on the outer edge of the window, beside the objects dock.
 /// Left click sets fill; right click sets outline. Swatches are *document
 /// swatches*, so named/spot/process colours retain their meaning.
@@ -273,8 +334,8 @@ pub fn color_strip(app: &mut VectorcraftApp, ui: &mut Ui) {
         })
         .unwrap_or_default();
     egui::Panel::right("opendraw_color_strip")
-        .exact_size(39.0)
-        .frame(egui::Frame::NONE.fill(t.panel).inner_margin(egui::Margin::symmetric(4, 5)).stroke(Stroke::new(1.0, t.border)))
+        .exact_size(26.0)
+        .frame(egui::Frame::NONE.fill(t.panel).inner_margin(egui::Margin::symmetric(2, 4)).stroke(Stroke::new(1.0, t.border)))
         .show(ui, |ui| {
             ui.vertical_centered(|ui| {
                 ui.label(egui::RichText::new("C").size(12.0).strong())
@@ -283,7 +344,7 @@ pub fn color_strip(app: &mut VectorcraftApp, ui: &mut Ui) {
             ui.separator();
             egui::ScrollArea::vertical().id_salt("opendraw_color_scroll").auto_shrink([false, false]).show(ui, |ui| {
                 for (name, paint) in swatches {
-                    let (rect, response) = ui.allocate_exact_size(vec2(27.0, 24.0), Sense::click());
+                    let (rect, response) = ui.allocate_exact_size(vec2(19.0, 21.0), Sense::click());
                     widgets::swatch_tile(ui, rect.shrink(1.0), &paint, false, response.hovered());
                     let response = response.on_hover_text(format!("{name}\nSinistro: riempimento · Destro: contorno"));
                     let command = if response.secondary_clicked() {
