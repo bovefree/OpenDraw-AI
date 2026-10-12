@@ -260,6 +260,8 @@ pub fn command_specs() -> &'static [CommandSpec] {
         v.extend(newart::specs());
         v.extend(colortheme::specs());
         v.extend(fileio::pdf::specs());
+        #[cfg(feature = "opendraw")]
+        v.extend(preflight::specs());
         v.extend(docsetup::specs());
         v.extend(newdoc::specs());
         v.extend(place::specs());
