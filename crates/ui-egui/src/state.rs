@@ -627,7 +627,7 @@ impl Default for UiState {
             about: false,
             action_sets: crate::panels::actions::default_sets(),
             recording: None,
-            shortcut_overrides: Default::default(),
+            shortcut_overrides: crate::shortcut_editor::preset(crate::shortcut_editor::PRESETS[0]).unwrap_or_default(),
             shortcut_set: default_shortcut_set(),
             workspace: default_workspace(),
             custom_workspaces: vec![],

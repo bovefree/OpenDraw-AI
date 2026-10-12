@@ -17,6 +17,9 @@ use crate::state::{Dialog, UiState};
 use crate::theme::{self, Tokens};
 use crate::{VectorcraftApp, menus, widgets};
 
+#[cfg(feature = "opendraw")]
+pub const PRESETS: &[&str] = &["OpenDraw Corel-style", "VectorCraft Defaults", "Classic Defaults"];
+#[cfg(not(feature = "opendraw"))]
 pub const PRESETS: &[&str] = &["VectorCraft Defaults", "Classic Defaults"];
 pub const CUSTOM: &str = "Custom";
 /// Set names earlier versions saved: (old name, current name).
@@ -355,9 +358,25 @@ pub fn reset_one(overrides: &mut BTreeMap<String, String>, key: &str) {
     overrides.remove(key);
 }
 
-/// Overrides of a preset (both presets are the registry defaults for now).
+/// Overrides of a preset. Only OpenDraw builds offer the optional
+/// Corel-style set; the original VectorCraft presets retain their defaults.
 pub fn preset(name: &str) -> Option<BTreeMap<String, String>> {
-    PRESETS.contains(&set_name(name)).then(BTreeMap::new)
+    let name = set_name(name);
+    if !PRESETS.contains(&name) {
+        return None;
+    }
+    let mut overrides = BTreeMap::new();
+    #[cfg(feature = "opendraw")]
+    if name == "OpenDraw Corel-style" {
+        // Conflicts with default panel shortcuts are deliberately cleared:
+        // a drawing tool must win over a panel when the user presses F5–F8.
+        for (id, key) in
+            [("tool:pencil", "F5"), ("tool:rectangle", "F6"), ("tool:ellipse", "F7"), ("tool:type", "F8"), ("tool:directSelection", "F10")]
+        {
+            assign(&mut overrides, id, Some(key), true).ok()?;
+        }
+    }
+    Some(overrides)
 }
 
 /// Export format: `{"format": "vectorcraft-shortcuts", "set": name, "overrides": {...}}`.
@@ -942,9 +961,34 @@ mod tests {
     #[test]
     fn presets_are_the_defaults() {
         for p in PRESETS {
+            #[cfg(feature = "opendraw")]
+            if *p == "OpenDraw Corel-style" {
+                continue;
+            }
             assert_eq!(preset(p), Some(BTreeMap::new()));
         }
         assert!(preset("Nope").is_none());
+    }
+
+    #[cfg(feature = "opendraw")]
+    #[test]
+    fn corel_style_shortcuts_activate_tools_without_panel_conflicts() {
+        let p = preset("OpenDraw Corel-style").unwrap();
+        for (id, key) in
+            [("tool:pencil", "F5"), ("tool:rectangle", "F6"), ("tool:ellipse", "F7"), ("tool:type", "F8"), ("tool:directSelection", "F10")]
+        {
+            assert_eq!(effective_in(&p, id).as_deref(), Some(key));
+            assert!(conflicts_with(&p, key, id).is_empty(), "{id}: {key}");
+        }
+        assert_eq!(effective_in(&p, "panel:color"), None);
+        assert_eq!(effective_in(&p, "panel:layers"), None);
+        assert_eq!(preset("VectorCraft Defaults"), Some(BTreeMap::new()));
+        let mut restored = UiState::default();
+        assert_eq!(restored.shortcut_set, "OpenDraw Corel-style");
+        assert_eq!(restored.shortcut_overrides, p);
+        restored.shortcut_overrides.clear();
+        restored.shortcut_set = "VectorCraft Defaults".into();
+        assert!(restored.shortcut_overrides.is_empty());
     }
 
     #[test]
