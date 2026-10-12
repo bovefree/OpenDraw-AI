@@ -9,7 +9,7 @@ pub(super) fn show(app: &mut VectorcraftApp, ctx: &egui::Context) {
         return;
     }
     let mut open = true;
-    egui::Window::new(tl!("About VectorCraft"))
+    egui::Window::new(if cfg!(feature = "opendraw") { "Informazioni su OpenDraw AI" } else { tl!("About VectorCraft") })
         .collapsible(false)
         .resizable(false)
         .open(&mut open)
@@ -52,22 +52,40 @@ fn about_tab(app: &mut VectorcraftApp, ui: &mut egui::Ui) {
         let (r, _) = ui.allocate_exact_size(egui::vec2(44.0, 44.0), egui::Sense::hover());
         crate::brand::paint_mark(ui, r);
         ui.vertical(|ui| {
-            ui.label(egui::RichText::new("VectorCraft").font(theme::semibold(22.0)));
-            ui.label(crate::i18n::fmt(
-                tl!("Version {version} — open-source vector illustration in pure Rust."),
-                &[("version", env!("CARGO_PKG_VERSION"))],
-            ));
+            ui.label(egui::RichText::new(if cfg!(feature = "opendraw") { "OpenDraw AI" } else { "VectorCraft" })
+                .font(theme::semibold(22.0)));
+            if cfg!(feature = "opendraw") {
+                ui.label(format!("Versione {} — software sperimentale di grafica vettoriale.", env!("CARGO_PKG_VERSION")));
+            } else {
+                ui.label(crate::i18n::fmt(
+                    tl!("Version {version} — open-source vector illustration in pure Rust."),
+                    &[("version", env!("CARGO_PKG_VERSION"))],
+                ));
+            }
         });
     });
     ui.add_space(12.0);
+    #[cfg(not(feature = "opendraw"))]
     crate::community::links(app, ui);
-    ui.add_space(12.0);
-    ui.label(
-        egui::RichText::new(tl!(
-            "Part of ArtCraft. MIT OR Apache-2.0. Fonts: Source Sans 3, Inter, JetBrains Mono (OFL). Icons: Lucide (ISC) + VectorCraft."
-        ))
-        .size(11.0),
-    );
+    #[cfg(feature = "opendraw")]
+    {
+        let _ = app;
+        ui.label("OpenDraw AI — interfaccia e flusso di lavoro per documenti vettoriali.");
+        ui.add_space(6.0);
+        ui.label(egui::RichText::new(
+            "Componenti e contributi open source: attribuzioni e licenze MIT/Apache-2.0 nei file LICENSE e NOTICE. Icone Lucide (ISC). Font con licenza OFL.",
+        ).size(11.0));
+    }
+    #[cfg(not(feature = "opendraw"))]
+    {
+        ui.add_space(12.0);
+        ui.label(
+            egui::RichText::new(tl!(
+                "Part of ArtCraft. MIT OR Apache-2.0. Fonts: Source Sans 3, Inter, JetBrains Mono (OFL). Icons: Lucide (ISC) + VectorCraft."
+            ))
+            .size(11.0),
+        );
+    }
     // The GPU the window renders with, for bug reports (Preferences › Performance picks it).
     if let Some(adapter) = &app.graphics_adapter {
         ui.add_space(6.0);
