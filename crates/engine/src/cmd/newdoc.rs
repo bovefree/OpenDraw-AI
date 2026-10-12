@@ -647,9 +647,7 @@ mod opendraw_tests {
     #[test]
     fn poster_print_preset_has_physical_dimensions_cmyk_and_bleed() {
         let print = CATEGORIES.iter().find(|c| c.0 == "Print").unwrap();
-        let poster = builtin(print, Unit::Millimeters)
-            .find(|p| p.name == "OpenDraw Manifesto 140×200 cm")
-            .unwrap();
+        let poster = builtin(print, Unit::Millimeters).find(|p| p.name == "OpenDraw Manifesto 140×200 cm").unwrap();
         assert!((poster.width - MM.to_pt(1400.0)).abs() < 1e-6);
         assert!((poster.height - MM.to_pt(2000.0)).abs() < 1e-6);
         assert_eq!(poster.units, Unit::Millimeters);
