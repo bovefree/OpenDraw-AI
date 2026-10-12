@@ -1,0 +1,44 @@
+name: OpenDraw Alpha 3 Corel layout
+
+on:
+  push:
+    branches:
+      - opendraw/od-015-corel-layout-and-brand
+  pull_request:
+    paths:
+      - '.github/workflows/opendraw-corel-layout.yml'
+      - 'crates/ui-egui/src/**'
+      - 'docs/opendraw/COREL_SCREENSHOT_PARITY.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: corel-layout-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  layout:
+    name: Home branding, Classic layout and upstream regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.95.0'
+          components: rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: Check workspace formatting
+        run: cargo fmt --all -- --check
+      - name: Test visible OpenDraw home branding
+        run: cargo test --locked -p vectorcraft-ui-egui --features opendraw opendraw_home_has_original_brand_and_no_upstream_links --lib
+      - name: Test Alpha 2 to Classic layout migration
+        run: cargo test --locked -p vectorcraft-ui-egui --features opendraw alpha_two_upgrade_uses_light_classic_and_saves_old_toolbar --lib
+      - name: Test OpenDraw home and menus
+        run: cargo test --locked -p vectorcraft-ui-egui --features opendraw tests_home --lib
+      - name: Test OpenDraw command/menu bindings
+        run: cargo test --locked -p vectorcraft-ui-egui --features opendraw menus::tests --lib
+      - name: Test unchanged upstream home
+        run: cargo test --locked -p vectorcraft-ui-egui tests_home --lib
