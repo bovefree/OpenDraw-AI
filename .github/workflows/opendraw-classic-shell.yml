@@ -37,6 +37,8 @@ jobs:
         run: cargo fmt --all -- --check
       - name: Check OpenDraw classic menus and working commands
         run: cargo test --locked -p vectorcraft-ui-egui --features opendraw classic_ --lib
+      - name: Test Alpha 1 to Classic workspace migration
+        run: cargo test --locked -p vectorcraft-ui-egui --features opendraw migrating_alpha_one_workspace_preserves_old_layout_and_user_preferences --lib
       - name: Test OpenDraw menu/UI regressions
         run: cargo test --locked -p vectorcraft-ui-egui --features opendraw menus::tests --lib
       - name: Test untouched VectorCraft menu/UI behavior
