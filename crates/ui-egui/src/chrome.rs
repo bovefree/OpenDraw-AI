@@ -43,11 +43,22 @@ pub fn app_bar(app: &mut VectorcraftApp, ui: &mut Ui) {
                 crate::brand::paint_mark(ui, r);
                 ui.add_space(6.0);
             }
-            let on_home = menus::home_showing(app);
-            if widgets::icon_button(ui, "house", tl!("Home"), on_home, 20.0).clicked() {
-                app.run("app.home", json!({})).ok();
+            // The first OpenDraw alpha still looked like upstream on Windows,
+            // because the operating-system titlebar suppressed its logo.
+            // Keep an explicit app identity beside the working classic menu.
+            #[cfg(feature = "opendraw")]
+            {
+                ui.label(egui::RichText::new("OpenDraw AI").size(14.0).strong().color(t.text_strong));
+                ui.add_space(10.0);
             }
-            ui.add_space(2.0);
+            #[cfg(not(feature = "opendraw"))]
+            {
+                let on_home = menus::home_showing(app);
+                if widgets::icon_button(ui, "house", tl!("Home"), on_home, 20.0).clicked() {
+                    app.run("app.home", json!({})).ok();
+                }
+                ui.add_space(2.0);
+            }
             // With the macOS menu bar the menus are at the top of the screen instead.
             let menus_end = if app.services.native_menu.is_some() { ui.cursor().min.x } else { menus::menu_bar(app, ui) };
             // The right-side group fills the space after the menus from the right; when it runs
@@ -67,7 +78,7 @@ pub fn app_bar(app: &mut VectorcraftApp, ui: &mut Ui) {
             let icon = 28.0;
             let search = room >= 64.0 + 8.0 + gap + icon;
             let ws_w = ws_w.min(room - 8.0 - gap - if search { icon } else { 0.0 }).max(64.0);
-            let discord = search && room >= ws_w + 8.0 + gap + icon + 10.0 + gap + crate::community::discord_width(ui, false);
+            let discord = !cfg!(feature = "opendraw") && search && room >= ws_w + 8.0 + gap + icon + 10.0 + gap + crate::community::discord_width(ui, false);
             let mut rui = ui.new_child(egui::UiBuilder::new().max_rect(right).layout(egui::Layout::right_to_left(egui::Align::Center)));
             let ui = &mut rui;
             // Workspace switcher: shows the current workspace, opens Window → Workspace.
