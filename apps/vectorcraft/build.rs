@@ -19,7 +19,7 @@ fn main() -> Result<(), String> {
             .set("FileDescription", "OpenDraw AI native vector editor preview")
             .set("CompanyName", "OpenDraw AI contributors")
             .set("LegalCopyright", "Derived from VectorCraft; MIT OR Apache-2.0.")
-            .set("OriginalFilename", "vectorcraft.exe")
+            .set("OriginalFilename", "OpenDrawAI.exe")
             .set("InternalName", "opendraw-ai-preview");
     } else {
         res.set_icon("../../assets/app-icon/vectorcraft.ico")
