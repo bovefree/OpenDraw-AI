@@ -269,11 +269,7 @@ pub fn classic_dock(app: &mut VectorcraftApp, ui: &mut Ui) {
         .frame(egui::Frame::NONE.fill(t.panel).inner_margin(egui::Margin::symmetric(2, 5)).stroke(Stroke::new(1.0, t.border)))
         .show(ui, |ui| {
             ui.vertical_centered(|ui| {
-                for (tab, label) in [
-                    (DockTab::Layers, "O"),
-                    (DockTab::Properties, "P"),
-                    (DockTab::Libraries, "L"),
-                ] {
+                for (tab, label) in [(DockTab::Layers, "O"), (DockTab::Properties, "P"), (DockTab::Libraries, "L")] {
                     if ui.selectable_label(app.ui.dock_tab == tab, label).on_hover_text(tab.info().1).clicked() {
                         app.ui.dock_tab = tab;
                     }
