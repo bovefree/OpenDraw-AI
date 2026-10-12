@@ -52,11 +52,11 @@ mod path;
 mod pathops;
 mod patterncmds;
 pub mod pdfcmds;
-#[cfg(feature = "opendraw")]
-mod preflight;
 pub mod perspgrid;
 pub(crate) mod place;
 pub mod plugin;
+#[cfg(feature = "opendraw")]
+mod preflight;
 pub mod prefscmds;
 pub mod print;
 pub(crate) mod printadvanced;
