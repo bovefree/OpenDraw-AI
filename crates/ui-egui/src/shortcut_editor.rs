@@ -370,13 +370,9 @@ pub fn preset(name: &str) -> Option<BTreeMap<String, String>> {
     if name == "OpenDraw Corel-style" {
         // Conflicts with default panel shortcuts are deliberately cleared:
         // a drawing tool must win over a panel when the user presses F5–F8.
-        for (id, key) in [
-            ("tool:pencil", "F5"),
-            ("tool:rectangle", "F6"),
-            ("tool:ellipse", "F7"),
-            ("tool:type", "F8"),
-            ("tool:directSelection", "F10"),
-        ] {
+        for (id, key) in
+            [("tool:pencil", "F5"), ("tool:rectangle", "F6"), ("tool:ellipse", "F7"), ("tool:type", "F8"), ("tool:directSelection", "F10")]
+        {
             assign(&mut overrides, id, Some(key), true).ok()?;
         }
     }
@@ -978,13 +974,9 @@ mod tests {
     #[test]
     fn corel_style_shortcuts_activate_tools_without_panel_conflicts() {
         let p = preset("OpenDraw Corel-style").unwrap();
-        for (id, key) in [
-            ("tool:pencil", "F5"),
-            ("tool:rectangle", "F6"),
-            ("tool:ellipse", "F7"),
-            ("tool:type", "F8"),
-            ("tool:directSelection", "F10"),
-        ] {
+        for (id, key) in
+            [("tool:pencil", "F5"), ("tool:rectangle", "F6"), ("tool:ellipse", "F7"), ("tool:type", "F8"), ("tool:directSelection", "F10")]
+        {
             assert_eq!(effective_in(&p, id).as_deref(), Some(key));
             assert!(conflicts_with(&p, key, id).is_empty(), "{id}: {key}");
         }
