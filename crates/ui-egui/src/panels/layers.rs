@@ -343,6 +343,14 @@ struct Out {
     toggle: Vec<(NodeId, bool)>,
 }
 
+/// Pick exactly the clip group whose row was used, then apply the existing
+/// engine command. Both operations are routed through the same document
+/// session; only Release edits the document (and is a single undo step).
+#[cfg(feature = "opendraw")]
+fn powerclip_row_actions(id: NodeId, command: &str) -> [(String, Value); 2] {
+    [("select.set".into(), json!({"ids":[id.0]})), (command.into(), json!({}))]
+}
+
 pub fn show(app: &mut VectorcraftApp, ui: &mut Ui) {
     let t = Tokens::get(ui.ctx());
     let Some(st) = app.session.active() else { return };
@@ -774,6 +782,25 @@ fn row(ui: &mut Ui, view: &View, item: &Row, out: &mut Out) {
         ui.ctx().set_cursor_icon(egui::CursorIcon::Grabbing);
     }
     drop_target(ui, view, n, r, x - 16.0, open, &resp, out);
+
+    // Corel-style PowerClip workflow: right-click its row, without first
+    // hunting for the frame on the canvas. All commands use existing
+    // editable clip groups; no rasterization or duplicated mask engine.
+    #[cfg(feature = "opendraw")]
+    if matches!(n.kind, NodeKind::Group { clip: true, .. }) && n.visible && !n.locked {
+        resp.context_menu(|ui| {
+            for (label, command) in [
+                ("Edit PowerClip Contents", "object.clippingMask.editContents"),
+                ("Edit PowerClip Frame", "object.clippingMask.editMask"),
+                ("Release PowerClip", "object.clippingMask.release"),
+            ] {
+                if ui.button(label).clicked() {
+                    out.actions.extend(powerclip_row_actions(n.id, command));
+                    ui.close();
+                }
+            }
+        });
+    }
 }
 
 /// Alt-clicking row `n`'s eye (`eye`) or lock: Hide Others or Lock Others, every top-level layer
@@ -1316,6 +1343,37 @@ mod tests {
     use vectorcraft_engine::Session;
 
     use super::*;
+
+    #[cfg(feature = "opendraw")]
+    #[test]
+    fn powerclip_row_commands_target_the_correct_clip_and_preserve_editability() {
+        let mut s = Session::new();
+        s.execute("file.new", &json!({"width":300,"height":300})).unwrap();
+        let image = s.execute("shape.rectangle", &json!({"x":0,"y":0,"width":100,"height":100})).unwrap()["id"].as_u64().unwrap();
+        let frame = s.execute("shape.ellipse", &json!({"x":10,"y":10,"width":50,"height":50})).unwrap()["id"].as_u64().unwrap();
+        s.execute("select.set", &json!({"ids":[image,frame]})).unwrap();
+        let clip = s.execute("object.clippingMask.make", &json!({})).unwrap()["id"].as_u64().unwrap();
+        let (mask, contents) = match &s.doc().unwrap().doc.node(NodeId(clip)).unwrap().kind {
+            NodeKind::Group { children, clip: true } => (children[0].id, children[1].id),
+            _ => panic!("make must create an editable clip group"),
+        };
+        for (cmd, p) in powerclip_row_actions(NodeId(clip), "object.clippingMask.editMask") {
+            s.execute(&cmd, &p).unwrap();
+        }
+        assert_eq!(s.doc().unwrap().selection.objects, vec![mask]);
+        for (cmd, p) in powerclip_row_actions(NodeId(clip), "object.clippingMask.editContents") {
+            s.execute(&cmd, &p).unwrap();
+        }
+        assert_eq!(s.doc().unwrap().selection.objects, vec![contents]);
+        for (cmd, p) in powerclip_row_actions(NodeId(clip), "object.clippingMask.release") {
+            s.execute(&cmd, &p).unwrap();
+        }
+        assert!(!s.doc().unwrap().doc.node(NodeId(clip)).unwrap().clips());
+        assert!(s.doc().unwrap().doc.node(mask).is_some());
+        assert!(s.doc().unwrap().doc.node(contents).is_some());
+        s.execute("edit.undo", &json!({})).unwrap();
+        assert!(s.doc().unwrap().doc.node(NodeId(clip)).unwrap().clips(), "release is reversible");
+    }
 
     /// Filled target circles drawn by one headless frame of the panel.
     fn filled_targets(app: &mut VectorcraftApp, ctx: &egui::Context) -> usize {

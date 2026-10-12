@@ -1,0 +1,36 @@
+name: OpenDraw PowerClip panel
+
+on:
+  push:
+    branches:
+      - opendraw/od-013-powerclip-panel
+  pull_request:
+    paths:
+      - '.github/workflows/opendraw-powerclip-panel.yml'
+      - 'crates/ui-egui/src/panels/layers.rs'
+      - 'docs/opendraw/POWERCLIP.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  powerclip:
+    name: PowerClip panel UI and upstream compatibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.95.0'
+          components: rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: Check Rust formatting
+        run: cargo fmt --all -- --check
+      - name: Test PowerClip row targeting and undo
+        run: cargo test --locked -p vectorcraft-ui-egui --features opendraw powerclip_row_commands_target_the_correct_clip_and_preserve_editability --lib
+      - name: Test existing Layers UI in OpenDraw
+        run: cargo test --locked -p vectorcraft-ui-egui --features opendraw panels::layers::tests --lib
+      - name: Test existing Layers UI in VectorCraft
+        run: cargo test --locked -p vectorcraft-ui-egui panels::layers::tests --lib
