@@ -3870,6 +3870,7 @@ theme	Appearance	Erscheinungsbild
 # The macOS menu bar (native_menu): the app and Window menus' system items, Settings pages.
 	Services	Dienste
 	Hide VectorCraft	VectorCraft ausblenden
+	Hide OpenDraw AI	OpenDraw AI ausblenden
 	Zoom	Zoomen
 	Bring All to Front	Alle nach vorne bringen
 	Settings	Einstellungen
