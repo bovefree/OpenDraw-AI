@@ -38,21 +38,9 @@ use crate::i18n::{Lang, tr, tr_ctx};
 use crate::menus::{self, Entry};
 use crate::theme::Brightness;
 
-pub const APP_NAME: &str = if cfg!(feature = "opendraw") {
-    "OpenDraw AI"
-} else {
-    "VectorCraft"
-};
-const HIDE_LABEL: &str = if cfg!(feature = "opendraw") {
-    "Hide OpenDraw AI"
-} else {
-    "Hide VectorCraft"
-};
-const QUIT_LABEL: &str = if cfg!(feature = "opendraw") {
-    "Quit OpenDraw AI"
-} else {
-    "Quit VectorCraft"
-};
+pub const APP_NAME: &str = if cfg!(feature = "opendraw") { "OpenDraw AI" } else { "VectorCraft" };
+const HIDE_LABEL: &str = if cfg!(feature = "opendraw") { "Hide OpenDraw AI" } else { "Hide VectorCraft" };
+const QUIT_LABEL: &str = if cfg!(feature = "opendraw") { "Quit OpenDraw AI" } else { "Quit VectorCraft" };
 /// Hide current app: an item of ours (AppKit's always takes ⌘H, which is View › Hide Edges).
 pub const HIDE: &str = "app.hide";
 /// Hide Others: an item of ours, so a command bound to ⌥⌘H keeps it.
@@ -62,19 +50,18 @@ pub const MINIMIZE: &str = "window.minimize";
 
 /// The labels the Mac layout adds to the menus (translated like every menu string:
 /// [`crate::menus::menu_strings`]).
-pub const MAC_LABELS: &[&str] =
-    &[
-        "Settings",
-        "Appearance",
-        "Services",
-        "Hide VectorCraft",
-        "Hide OpenDraw AI",
-        "Hide Others",
-        "Show All",
-        "Minimize",
-        "Zoom",
-        "Bring All to Front",
-    ];
+pub const MAC_LABELS: &[&str] = &[
+    "Settings",
+    "Appearance",
+    "Services",
+    "Hide VectorCraft",
+    "Hide OpenDraw AI",
+    "Hide Others",
+    "Show All",
+    "Minimize",
+    "Zoom",
+    "Bring All to Front",
+];
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct MenuBar {
