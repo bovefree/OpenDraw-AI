@@ -3967,6 +3967,7 @@ axis	Both	Les deux
 # The macOS menu bar (native_menu): the app and Window menus' system items, Settings pages.
 	Services	Services
 	Hide VectorCraft	Masquer VectorCraft
+	Hide OpenDraw AI	Masquer OpenDraw AI
 	Zoom	Zoom
 	Bring All to Front	Tout ramener au premier plan
 	Settings	Réglages
