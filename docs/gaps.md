@@ -251,3 +251,7 @@ from G14 and the budget run of G15: **~170–270 h** one agent, ~50–80 h wall 
 | 2026-10-10 | minor | G9 evidence counted from the tracker (28 `.ai`/EPS issues, 20 fixed); impact narrowed to handing files back |
 | 2026-10-10 | minor | Alpha blockers checked against the core-workflow gate: none |
 | 2026-10-10 | major | Moved from the ROADMAP's "Where we're lacking"; kept ids G1–G8, added G9–G19 (file formats, stability, bugs, preferences, 30.x additions, pen hardware, performance, localization, ecosystem, AI, accessibility) and re-ranked |
+
+## OpenDraw OD-015 — 2026-10-12
+
+Stato: parziale, verifica della nuova build in sospeso; punteggi upstream invariati. Barre/toolbox/palette compattate, pannello Classica richiudibile e proprietà testo/immagine/contorno collegate al motore; corretta l’asserzione obsoleta del workspace Classica. Il gap di fedeltà Corel resta aperto. Evidenze e limiti: [COREL_SCREENSHOT_PARITY.md](opendraw/COREL_SCREENSHOT_PARITY.md), test in crates/ui-egui/src/opendraw_shell.rs, pipeline Windows prima di macOS in opendraw-branded-preview.yml.

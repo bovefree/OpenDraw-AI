@@ -365,17 +365,21 @@ pub fn preset(name: &str) -> Option<BTreeMap<String, String>> {
     if !PRESETS.contains(&name) {
         return None;
     }
-    let mut overrides = BTreeMap::new();
+    let overrides = BTreeMap::new();
     #[cfg(feature = "opendraw")]
-    if name == "OpenDraw Corel-style" {
-        // Conflicts with default panel shortcuts are deliberately cleared:
-        // a drawing tool must win over a panel when the user presses F5–F8.
-        for (id, key) in
-            [("tool:pencil", "F5"), ("tool:rectangle", "F6"), ("tool:ellipse", "F7"), ("tool:type", "F8"), ("tool:directSelection", "F10")]
-        {
-            assign(&mut overrides, id, Some(key), true).ok()?;
+    let overrides = {
+        let mut overrides = overrides;
+        if name == "OpenDraw Corel-style" {
+            // Conflicts with default panel shortcuts are deliberately cleared:
+            // a drawing tool must win over a panel when the user presses F5–F8.
+            for (id, key) in
+                [("tool:pencil", "F5"), ("tool:rectangle", "F6"), ("tool:ellipse", "F7"), ("tool:type", "F8"), ("tool:directSelection", "F10")]
+            {
+                assign(&mut overrides, id, Some(key), true).ok()?;
+            }
         }
-    }
+        overrides
+    };
     Some(overrides)
 }
 

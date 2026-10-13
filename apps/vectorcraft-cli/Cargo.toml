@@ -13,6 +13,11 @@ path = "src/main.rs"
 [lints]
 workspace = true
 
+[features]
+# The CLI shares the desktop profile module; declare its product profile flag
+# so strict cfg checking works, and branded CLI builds use an isolated profile.
+opendraw = []
+
 [dependencies]
 vectorcraft-color = { workspace = true }
 vectorcraft-doc = { workspace = true }

@@ -7,6 +7,8 @@ on:
     paths:
       - '.github/workflows/opendraw-branded-preview.yml'
       - 'apps/vectorcraft/**'
+      - 'apps/vectorcraft-cli/**'
+      - 'crates/engine/**'
       - 'crates/ui-egui/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
@@ -17,7 +19,7 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   format:
@@ -41,17 +43,33 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: '1.95.0'
+          components: clippy
       - uses: Swatinem/rust-cache@v2
       - name: Build native OpenDraw application
         run: cargo build --release --locked -p vectorcraft --features opendraw
       - name: Check isolated profile
         run: cargo test --locked -p vectorcraft --features opendraw opendraw_profile_is_separate_from_upstream_on_both_desktops
+      - name: Test compact workspace and persistence
+        run: cargo test --locked -p vectorcraft-ui-egui --features opendraw workspaces::tests --lib
+      - name: Test contextual shell and palette commands
+        run: cargo test --locked -p vectorcraft-ui-egui --features opendraw opendraw_shell::tests --lib
+      - name: Test OpenDraw migration and defaults
+        run: cargo test --locked -p vectorcraft-ui-egui --features opendraw state::tests --lib
+      - name: Check upstream workspace behavior
+        run: cargo test --locked -p vectorcraft-ui-egui workspaces::tests --lib
+      - name: Check strict workspace Rust lints
+        run: cargo clippy --locked --workspace --all-targets -- -D warnings
+      - name: Check strict OpenDraw Rust lints
+        run: cargo clippy --locked -p vectorcraft-ui-egui --features opendraw --lib -- -D warnings
       - name: Package portable archive
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           New-Item -ItemType Directory -Force -Path 'dist/OpenDrawAI-windows-x64' | Out-Null
           Copy-Item 'target/release/vectorcraft.exe' 'dist/OpenDrawAI-windows-x64/OpenDrawAI.exe'
+          git rev-parse HEAD | Set-Content -Encoding UTF8 'dist/OpenDrawAI-windows-x64/SOURCE_COMMIT.txt'
+          ('{0}  OpenDrawAI.exe' -f (Get-FileHash 'dist/OpenDrawAI-windows-x64/OpenDrawAI.exe' -Algorithm SHA256).Hash) |
+            Set-Content -Encoding UTF8 'dist/OpenDrawAI-windows-x64/SHA256SUMS.txt'
           foreach ($file in @('LICENSE-MIT','LICENSE-APACHE','NOTICE')) {
             if (Test-Path $file) { Copy-Item $file 'dist/OpenDrawAI-windows-x64/' }
           }
@@ -69,7 +87,7 @@ jobs:
     name: macOS Apple Silicon OpenDraw AI Alpha 3
     runs-on: macos-15
     timeout-minutes: 120
-    needs: format
+    needs: windows
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -81,6 +99,10 @@ jobs:
           key: opendraw-macos-arm64
       - name: Build Apple Silicon executable
         run: cargo build --release --locked -p vectorcraft --features opendraw --target aarch64-apple-darwin
+      - name: Test Apple Silicon profile and shell
+        run: |
+          cargo test --locked -p vectorcraft --features opendraw --target aarch64-apple-darwin opendraw_profile_is_separate_from_upstream_on_both_desktops
+          cargo test --locked -p vectorcraft-ui-egui --features opendraw --target aarch64-apple-darwin opendraw_shell::tests --lib
       - name: Package unsigned testing app bundle
         shell: bash
         run: |
@@ -108,7 +130,9 @@ jobs:
           codesign --force --sign - --options runtime "$APP"
           codesign --verify --strict --deep "$APP"
           ditto "$APP" "dist/stage/OpenDraw AI.app"
-          cp LICENSE-MIT LICENSE-APACHE dist/stage/
+          cp LICENSE-MIT LICENSE-APACHE NOTICE dist/stage/
+          git rev-parse HEAD > dist/stage/SOURCE_COMMIT.txt
+          (cd dist/stage && shasum -a 256 'OpenDraw AI.app/Contents/MacOS/OpenDrawAI') > dist/stage/SHA256SUMS.txt
           printf '%s\n' 'OpenDraw AI Alpha 3: ad-hoc signed, NOT Apple-notarized. For local testing only. Use document copies, not originals.' 'CDR import is NOT supported.' > dist/stage/READ_FIRST.txt
           ditto -c -k --keepParent dist/stage dist/OpenDrawAI-macos-arm64-alpha3.zip
           lipo -info "$APP/Contents/MacOS/OpenDrawAI"

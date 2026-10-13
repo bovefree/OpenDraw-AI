@@ -527,6 +527,29 @@ pub(crate) fn control_bar(app: &mut VectorcraftApp, ui: &mut Ui) {
     ui.separator();
 }
 
+/// Compact OpenDraw type controls, sharing range-aware edits with Character.
+#[cfg(feature = "opendraw")]
+pub(crate) fn opendraw_control_bar(app: &mut VectorcraftApp, ui: &mut Ui) {
+    let Some((s, _)) = text_style(app) else { return };
+    if ui.link("Testo").on_hover_text("Proprietà del testo").clicked() {
+        app.ui.dock_tab = crate::state::DockTab::Properties;
+        app.ui.dock_collapsed = false;
+    }
+    font_pickers(app, ui, &s, ("od-font", "od-font-style"), (145.0, 90.0));
+    size_field(app, ui, "od-font-size", 72.0);
+    let (bold, _, italic, _) = face_of(&s.font_style);
+    for (label, face, active, tip) in [("B", Face::Bold, bold, "Grassetto"), ("I", Face::Italic, italic, "Corsivo")] {
+        if ui.selectable_label(active, label).on_hover_text(tip).clicked()
+            && let Err(error) = toggle_face(app, face)
+        {
+            app.ui.status = error;
+        }
+    }
+    if ui.selectable_label(s.underline, "U").on_hover_text("Sottolineato").clicked() {
+        format(app, json!({"underline":!s.underline}));
+    }
+}
+
 pub fn show(app: &mut VectorcraftApp, ui: &mut Ui) {
     let Some((s, _)) = text_style(app) else {
         super::empty_state(ui, "type", tl!("No text selected"), tl!("Select a text object to edit its character attributes."));

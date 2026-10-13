@@ -544,3 +544,7 @@ Moved from the ROADMAP's "Shipped so far" on 2026-10-10. Update it when a featur
 | 2026-10-10 | major | Full re-measure against Illustrator 2026 30.x from code counts, open issues and public docs; added breadth/depth/ready-for-real-work numbers, generative-AI row, calibration from PR timestamps; merged the ROADMAP's parity estimate, honest assessment and "Shipped so far" into this file |
 | 2026-10-05 | major | (in ROADMAP.md) M3 and M4 rows re-derived after the paint and files milestones |
 | 2026-10-02 | major | (in ROADMAP.md) First 22-area weighted estimate |
+
+## OpenDraw OD-015 — 2026-10-12
+
+Stato: parziale, verifica della nuova build in sospeso; punteggi upstream invariati. Barre/toolbox/palette compattate, pannello Classica richiudibile e proprietà testo/immagine/contorno collegate al motore; corretta l’asserzione obsoleta del workspace Classica. Il gap di fedeltà Corel resta aperto. Evidenze e limiti: [COREL_SCREENSHOT_PARITY.md](opendraw/COREL_SCREENSHOT_PARITY.md), test in crates/ui-egui/src/opendraw_shell.rs, pipeline Windows prima di macOS in opendraw-branded-preview.yml.

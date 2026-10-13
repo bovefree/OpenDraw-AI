@@ -15,6 +15,7 @@ use crate::{VectorcraftApp, icons, widgets};
 
 const PITCH: f32 = 30.0;
 const WIDTH: f32 = if cfg!(feature = "opendraw") { 34.0 } else { 48.0 };
+const BUTTON_WIDTH: f32 = if cfg!(feature = "opendraw") { 30.0 } else { 36.0 };
 /// Seconds a press on a tool group's button is held before its flyout opens.
 const LONG_PRESS: f64 = 0.35;
 /// Width of the grab bar down a flyout's right side: dragging it tears the flyout off.
@@ -67,15 +68,18 @@ pub const BASIC: &[(&str, &[&[&str]])] = &[
 /// the source application icons are not copied. A long press exposes variants.
 #[cfg(feature = "opendraw")]
 pub const CLASSIC: &[(&str, &[&[&str]])] = &[
-    ("Puntatore", &[&["selection"], &["directSelection", "groupSelection"]]),
-    ("Ritaglia", &[&[vectorcraft_tools::cropimage::ID, "knife", "scissors"]]),
+    ("Puntatore", &[&["selection", "lasso", "freeTransform"], &["directSelection", "groupSelection", "smooth", "warp", "twirl"]]),
+    // Crop Image is an internal editing tool without catalogue metadata. Its
+    // working command remains in Bitmap and the contextual image controls;
+    // putting its id here hid the entire slot, including Knife and Scissors.
+    ("Ritaglia", &[&["knife", "scissors", "eraser"]]),
     ("Zoom", &[&["zoom", "hand"]]),
-    ("Disegno", &[&["pencil", "smooth", "pen", "curvature"], &["paintbrush", "blobBrush"]]),
+    ("Disegno", &[&["pencil", "lineSegment", "pen", "curvature", "arc"], &["paintbrush", "blobBrush"]]),
     ("Forme", &[&["rectangle", "roundedRectangle"], &["ellipse"], &["polygon", "star"]]),
     ("Testo", &[&["type", "areaType", "typeOnPath"]]),
-    ("Modifica", &[&["lineSegment", "arc"], &["eraser", "pathEraser"]]),
+    ("Modifica", &[&["blend", "reshape", "width"], &["pathEraser"]]),
     ("Colore", &[&["eyedropper"], &["gradient", "mesh"]]),
-    ("Naviga", &[&["hand"], &["artboard"]]),
+    ("Naviga", &[&["rotateView"], &["artboard"]]),
 ];
 
 pub(crate) fn tip(t: &ToolInfo) -> String {
@@ -205,7 +209,10 @@ fn body(app: &mut VectorcraftApp, ui: &mut Ui, cols: usize, floating: Option<egu
         let mut raise: Option<&'static str> = None;
         let mut i = 0;
         while i < all.len() {
-            if all[i].0.is_some() && !app.session.prefs.tool_group_labels {
+            if all[i].0.is_some() && cfg!(feature = "opendraw") && app.ui.workspace == "Classica" {
+                let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), 5.0), Sense::hover());
+                ui.painter().line_segment([r.center() - vec2(9.0, 0.0), r.center() + vec2(9.0, 0.0)], Stroke::new(0.5, t.divider));
+            } else if all[i].0.is_some() && !app.session.prefs.tool_group_labels {
                 // User Interface › Show Tool Group Labels off: a faint dash between the groups.
                 let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), 9.0), Sense::hover());
                 ui.painter().line_segment([r.center() - vec2(6.0, 0.0), r.center() + vec2(6.0, 0.0)], egui::Stroke::new(1.0, t.divider));
@@ -225,7 +232,7 @@ fn body(app: &mut VectorcraftApp, ui: &mut Ui, cols: usize, floating: Option<egu
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing.x = 0.0;
                 if cols == 1 {
-                    ui.add_space((WIDTH - 36.0) / 2.0);
+                    ui.add_space((WIDTH - BUTTON_WIDTH) / 2.0);
                 } else {
                     ui.add_space(2.0);
                 }
@@ -238,8 +245,8 @@ fn body(app: &mut VectorcraftApp, ui: &mut Ui, cols: usize, floating: Option<egu
                     };
                     let Some(shown) = tool_info(&shown_id).or_else(|| tool_info(slot[0])) else { continue };
                     let is_active = slot.contains(&active);
-                    let (rect, resp) = ui.allocate_exact_size(vec2(36.0, PITCH - 1.0), Sense::click_and_drag());
-                    let well = egui::Rect::from_center_size(rect.center(), vec2(35.5, 27.5));
+                    let (rect, resp) = ui.allocate_exact_size(vec2(BUTTON_WIDTH, PITCH - 1.0), Sense::click_and_drag());
+                    let well = egui::Rect::from_center_size(rect.center(), vec2(BUTTON_WIDTH - 0.5, 27.5));
                     if is_active {
                         ui.painter().rect_filled(well, CornerRadius::same(1), t.tool_active);
                     } else if resp.hovered() {
@@ -248,7 +255,7 @@ fn body(app: &mut VectorcraftApp, ui: &mut Ui, cols: usize, floating: Option<egu
                     let ir = egui::Rect::from_center_size(rect.center(), vec2(18.0, 18.0));
                     icons::paint(ui, icons::tool_icon(shown.icon), ir, if is_active { t.text_strong } else { t.icon });
                     if slot.len() > 1 {
-                        let c = rect.center() + vec2(12.5, 10.0);
+                        let c = rect.center() + vec2(BUTTON_WIDTH / 2.0 - 5.5, 10.0);
                         ui.painter().add(egui::Shape::convex_polygon(vec![c, c + vec2(-3.5, 0.0), c + vec2(0.0, -3.5)], t.icon, Stroke::NONE));
                     }
                     if editing {

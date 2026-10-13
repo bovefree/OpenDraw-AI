@@ -91,10 +91,28 @@ pub fn classic_menu_tree(mut roots: Vec<MenuRoot>) -> Vec<MenuRoot> {
 
 fn run_button(app: &mut VectorcraftApp, ui: &mut Ui, label: &str, id: &str, params: Value) {
     let enabled = menus::enabled(app, id);
-    if ui.add_enabled(enabled, egui::Button::new(label).min_size(vec2(61.0, 25.0))).clicked()
-        && let Err(error) = app.run(id, params)
-    {
-        app.ui.status = error;
+    let icon = match id {
+        "file.newDialog" => "file-plus",
+        "file.open" => "folder-open",
+        "file.save" => "save",
+        "edit.undo" => "undo-2",
+        "edit.redo" => "redo-2",
+        "view.fitArtboard" => "frame",
+        "view.fitAll" => "maximize-2",
+        "window.panel" if params.get("panel").and_then(Value::as_str) == Some("layers") => "layers",
+        _ => "layout-grid",
+    };
+    let mut clicked = false;
+    ui.add_enabled_ui(enabled, |ui| {
+        clicked = widgets::icon_button(ui, icon, label, false, 24.0).clicked();
+    });
+    if clicked {
+        if id == "window.panel" && params.get("panel").and_then(Value::as_str).is_some_and(|p| matches!(p, "layers" | "properties")) {
+            app.ui.dock_collapsed = false;
+        }
+        if let Err(error) = app.run(id, params) {
+            app.ui.status = error;
+        }
     }
 }
 
@@ -104,24 +122,26 @@ fn run_button(app: &mut VectorcraftApp, ui: &mut Ui, label: &str, id: &str, para
 pub fn command_bar(app: &mut VectorcraftApp, ui: &mut Ui) {
     let t = Tokens::get(ui.ctx());
     egui::Panel::top("opendraw_standard_bar")
-        .exact_size(40.0)
-        .frame(egui::Frame::NONE.fill(t.panel).inner_margin(egui::Margin::symmetric(8, 4)).stroke(Stroke::new(1.0, t.border)))
+        .exact_size(33.0)
+        .frame(egui::Frame::NONE.fill(t.panel).inner_margin(egui::Margin::symmetric(6, 3)).stroke(Stroke::new(1.0, t.border)))
         .show(ui, |ui| {
-            ui.horizontal_centered(|ui| {
-                run_button(app, ui, "Nuovo", "file.newDialog", json!({}));
-                run_button(app, ui, "Apri", "file.open", json!({}));
-                run_button(app, ui, "Salva", "file.save", json!({}));
-                ui.separator();
-                run_button(app, ui, "Annulla", "edit.undo", json!({}));
-                run_button(app, ui, "Ripeti", "edit.redo", json!({}));
-                ui.separator();
-                run_button(app, ui, "Pagina", "view.fitArtboard", json!({}));
-                run_button(app, ui, "Tutto", "view.fitAll", json!({}));
-                ui.separator();
-                run_button(app, ui, "Oggetti", "window.panel", json!({"panel":"layers"}));
-                run_button(app, ui, "Proprietà", "window.panel", json!({"panel":"properties"}));
-                ui.separator();
-                ui.label(egui::RichText::new("OpenDraw AI  ·  Classica").color(t.text_dim).size(11.0));
+            egui::ScrollArea::horizontal().id_salt("opendraw-standard-scroll").auto_shrink([false, true]).show(ui, |ui| {
+                ui.horizontal_centered(|ui| {
+                    run_button(app, ui, "Nuovo", "file.newDialog", json!({}));
+                    run_button(app, ui, "Apri", "file.open", json!({}));
+                    run_button(app, ui, "Salva", "file.save", json!({}));
+                    ui.separator();
+                    run_button(app, ui, "Annulla", "edit.undo", json!({}));
+                    run_button(app, ui, "Ripeti", "edit.redo", json!({}));
+                    ui.separator();
+                    run_button(app, ui, "Pagina", "view.fitArtboard", json!({}));
+                    run_button(app, ui, "Tutto", "view.fitAll", json!({}));
+                    ui.separator();
+                    run_button(app, ui, "Oggetti", "window.panel", json!({"panel":"layers"}));
+                    run_button(app, ui, "Proprietà", "window.panel", json!({"panel":"properties"}));
+                    ui.separator();
+                    ui.label(egui::RichText::new("OpenDraw AI  ·  Classica").color(t.text_dim).size(11.0));
+                });
             });
         });
 }
@@ -140,8 +160,8 @@ pub fn property_bar(app: &mut VectorcraftApp, ui: &mut Ui) {
     });
 
     egui::Panel::top("opendraw_classic_properties")
-        .exact_size(43.0)
-        .frame(egui::Frame::NONE.fill(t.panel).inner_margin(egui::Margin::symmetric(8, 5)).stroke(Stroke::new(1.0, t.border)))
+        .exact_size(40.0)
+        .frame(egui::Frame::NONE.fill(t.panel).inner_margin(egui::Margin::symmetric(6, 3)).stroke(Stroke::new(1.0, t.border)))
         .show(ui, |ui| {
             egui::ScrollArea::horizontal().auto_shrink([false, true]).show(ui, |ui| {
                 ui.horizontal_centered(|ui| {
@@ -169,8 +189,19 @@ pub fn property_bar(app: &mut VectorcraftApp, ui: &mut Ui) {
                         crate::panels::paint_chip(app, ui, false, 21.0, true);
                         ui.label("Contorno");
                         crate::panels::paint_chip(app, ui, true, 21.0, true);
+                        let stroke = crate::panels::current_stroke(app);
+                        let mixed = crate::panels::stroke_mixed(app, ui.ctx());
+                        let weight = crate::panels::stroke::shown_weight(app, stroke.as_ref(), &mixed);
+                        crate::panels::stroke::weight_field(app, ui, "opendraw-outline-width", weight, 72.0);
+                        if crate::panels::character::text_style(app).is_some() {
+                            ui.separator();
+                            crate::panels::character::opendraw_control_bar(app, ui);
+                        } else {
+                            crate::place::control_bar_details(app, ui);
+                        }
                         if ui.button("Oggetti").clicked() {
                             app.ui.dock_tab = crate::state::DockTab::Layers;
+                            app.ui.dock_collapsed = false;
                         }
                     } else {
                         ui.label(egui::RichText::new("Pagina").size(12.0).strong());
@@ -193,19 +224,21 @@ pub fn property_bar(app: &mut VectorcraftApp, ui: &mut Ui) {
                                 vectorcraft_doc::Unit::Inches,
                                 vectorcraft_doc::Unit::Pixels,
                             ] {
-                                if ui.selectable_label(units == unit, unit.label()).clicked() {
-                                    if let Err(error) = app.run("document.setUnits", json!({"units":unit.label()})) {
-                                        app.ui.status = error;
-                                    }
+                                if ui.selectable_label(units == unit, unit.label()).clicked()
+                                    && let Err(error) = app.run("document.setUnits", json!({"units":unit.label()}))
+                                {
+                                    app.ui.status = error;
                                 }
                             }
                         });
                         ui.separator();
                         if ui.button("Oggetti").clicked() {
                             app.ui.dock_tab = crate::state::DockTab::Layers;
+                            app.ui.dock_collapsed = false;
                         }
                         if ui.button("Proprietà").clicked() {
                             app.ui.dock_tab = crate::state::DockTab::Properties;
+                            app.ui.dock_collapsed = false;
                         }
                     }
                 });
@@ -223,8 +256,8 @@ pub fn page_bar(app: &mut VectorcraftApp, ui: &mut Ui) {
     let current = app.view().map_or(0, |v| v.artboard).min(pages - 1);
     let t = Tokens::get(ui.ctx());
     egui::Panel::bottom("opendraw_page_navigator")
-        .exact_size(31.0)
-        .frame(egui::Frame::NONE.fill(t.panel).inner_margin(egui::Margin::symmetric(6, 3)).stroke(Stroke::new(1.0, t.border)))
+        .exact_size(26.0)
+        .frame(egui::Frame::NONE.fill(t.panel).inner_margin(egui::Margin::symmetric(6, 1)).stroke(Stroke::new(1.0, t.border)))
         .show(ui, |ui| {
             egui::ScrollArea::horizontal().auto_shrink([false, true]).show(ui, |ui| {
                 ui.horizontal_centered(|ui| {
@@ -269,21 +302,35 @@ pub fn classic_dock(app: &mut VectorcraftApp, ui: &mut Ui) {
         .frame(egui::Frame::NONE.fill(t.panel).inner_margin(egui::Margin::symmetric(2, 5)).stroke(Stroke::new(1.0, t.border)))
         .show(ui, |ui| {
             ui.vertical_centered(|ui| {
-                for (tab, label) in [(DockTab::Layers, "O"), (DockTab::Properties, "P"), (DockTab::Libraries, "L")] {
-                    if ui.selectable_label(app.ui.dock_tab == tab, label).on_hover_text(tab.info().1).clicked() {
+                for tab in [DockTab::Layers, DockTab::Properties, DockTab::Libraries] {
+                    let label = tab.info().1;
+                    let galley = ui.painter().layout_no_wrap(label.to_string(), egui::FontId::proportional(11.0), t.text);
+                    let (rect, response) = ui.allocate_exact_size(vec2(24.0, galley.size().x + 24.0), Sense::click());
+                    if app.ui.dock_tab == tab && !app.ui.dock_collapsed {
+                        ui.painter().rect_filled(rect, 1.0, t.tool_active);
+                    } else if response.hovered() {
+                        ui.painter().rect_filled(rect, 1.0, t.hover);
+                    }
+                    let at = rect.center() + vec2(galley.size().y / 2.0, -galley.size().x / 2.0);
+                    ui.painter().add(egui::epaint::TextShape::new(at, galley, t.text).with_angle(std::f32::consts::FRAC_PI_2));
+                    if response.on_hover_text(label).clicked() {
+                        app.ui.dock_collapsed = app.ui.dock_tab == tab && !app.ui.dock_collapsed;
                         app.ui.dock_tab = tab;
                     }
                     ui.add_space(9.0);
                 }
                 ui.separator();
-                if ui.small_button("C").on_hover_text("Colore").clicked() {
-                    if let Err(error) = app.run("window.panel", json!({"panel":"color"})) {
-                        app.ui.status = error;
-                    }
+                if ui.small_button("C").on_hover_text("Colore").clicked()
+                    && let Err(error) = app.run("window.panel", json!({"panel":"color"}))
+                {
+                    app.ui.status = error;
                 }
             });
         });
 
+    if app.ui.dock_collapsed {
+        return;
+    }
     egui::Panel::right("opendraw_classic_dock")
         .resizable(true)
         .default_size(298.0)
@@ -294,6 +341,9 @@ pub fn classic_dock(app: &mut VectorcraftApp, ui: &mut Ui) {
             ui.horizontal(|ui| {
                 ui.label(egui::RichText::new(tab.info().1).size(13.0).strong());
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui.small_button("×").on_hover_text("Riduci pannello").clicked() {
+                        app.ui.dock_collapsed = true;
+                    }
                     ui.menu_button("⋯", |ui| {
                         for choice in [DockTab::Layers, DockTab::Properties, DockTab::Libraries] {
                             if ui.selectable_label(app.ui.dock_tab == choice, choice.info().1).clicked() {
@@ -335,7 +385,7 @@ pub fn color_strip(app: &mut VectorcraftApp, ui: &mut Ui) {
         })
         .unwrap_or_default();
     egui::Panel::right("opendraw_color_strip")
-        .exact_size(26.0)
+        .exact_size(22.0)
         .frame(egui::Frame::NONE.fill(t.panel).inner_margin(egui::Margin::symmetric(2, 4)).stroke(Stroke::new(1.0, t.border)))
         .show(ui, |ui| {
             ui.vertical_centered(|ui| {
@@ -344,8 +394,9 @@ pub fn color_strip(app: &mut VectorcraftApp, ui: &mut Ui) {
             });
             ui.separator();
             egui::ScrollArea::vertical().id_salt("opendraw_color_scroll").auto_shrink([false, false]).show(ui, |ui| {
+                ui.spacing_mut().item_spacing.y = 0.0;
                 for (name, paint) in swatches {
-                    let (rect, response) = ui.allocate_exact_size(vec2(19.0, 21.0), Sense::click());
+                    let (rect, response) = ui.allocate_exact_size(vec2(17.0, 16.0), Sense::click());
                     widgets::swatch_tile(ui, rect.shrink(1.0), &paint, false, response.hovered());
                     let response = response.on_hover_text(format!("{name}\nSinistro: riempimento · Destro: contorno"));
                     let command = if response.secondary_clicked() {
@@ -369,6 +420,52 @@ pub fn color_strip(app: &mut VectorcraftApp, ui: &mut Ui) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn app() -> VectorcraftApp {
+        let mut app = VectorcraftApp::new(vectorcraft_engine::Session::new(), Default::default());
+        app.run("file.new", json!({"width":210,"height":297})).unwrap();
+        app
+    }
+
+    #[test]
+    fn classic_dock_can_collapse_and_reopen_without_losing_selection() {
+        let mut app = app();
+        app.ui.dock_tab = crate::state::DockTab::Layers;
+        assert!(crate::tests_labels::painted_text(&mut app, classic_dock).contains("Oggetti"));
+        app.run("window.collapseDock", json!({})).unwrap();
+        assert!(app.ui.dock_collapsed);
+        // The labelled rail remains visible, while the panel body gives its width back.
+        let text = crate::tests_labels::painted_text(&mut app, classic_dock);
+        assert_eq!(text.lines().filter(|s| *s == "Oggetti").count(), 1);
+        app.run("window.collapseDock", json!({})).unwrap();
+        assert!(!app.ui.dock_collapsed);
+        assert_eq!(app.ui.dock_tab, crate::state::DockTab::Layers);
+        assert!(crate::tests_labels::painted_text(&mut app, classic_dock).contains("Oggetti"));
+    }
+
+    #[test]
+    fn property_bar_follows_text_selection_and_returns_to_geometry() {
+        let mut app = app();
+        let text = app.run("text.create", json!({"x":20,"y":30,"text":"OpenDraw","size":12})).unwrap()["id"].clone();
+        app.run("select.set", json!({"ids":[text]})).unwrap();
+        assert!(crate::tests_labels::painted_text(&mut app, property_bar).lines().any(|s| s == "Testo"));
+        let rect = app.run("shape.rectangle", json!({"x":10,"y":10,"width":20,"height":20})).unwrap()["id"].clone();
+        app.run("select.set", json!({"ids":[rect]})).unwrap();
+        assert!(!crate::tests_labels::painted_text(&mut app, property_bar).lines().any(|s| s == "Testo"));
+    }
+
+    #[test]
+    fn classic_flyout_tools_are_registered_and_unique() {
+        let mut seen = std::collections::BTreeSet::new();
+        for (_, groups) in crate::toolbar::CLASSIC {
+            for group in *groups {
+                for id in *group {
+                    assert!(vectorcraft_tools::tool_info(id).is_some(), "unknown tool {id}");
+                    assert!(seen.insert(*id), "tool {id} appears in more than one flyout");
+                }
+            }
+        }
+    }
 
     #[test]
     fn classic_menus_offer_working_commands_and_expose_missing_tables() {
