@@ -51,4 +51,11 @@ Stato: implementazione da collaudare, parità ancora parziale. Nessun materiale 
 - Corretto il blocco Clippy nonminimal_bool nel comando dei livelli con una semplificazione boolean equivalente.
 - Pipeline desktop: niente cancellazione della build precedente; macOS dipende dal completamento positivo di build/test/package Windows x64. Aggiunti test workspace OpenDraw e upstream, migrazione, shell e profilo macOS.
 
+## Iterazione operativa del 2026-10-13
+
+- Riorganizzati i gruppi della toolbox Classica: selezione, modifica forma, ritaglio, zoom, disegno, forme, testo, modifica, colore e navigazione. Le varianti di taglio sono riunite; i controlli di nodi restano separati dagli strumenti di deformazione.
+- Il flyout Ritaglia espone ora il comando Crop Image già esistente nel motore, insieme a coltello, forbici e strumenti di taglio. L’icona proviene dal set originale di OpenDraw; nessun comando o asset Corel è stato riutilizzato.
+- I flyout mostrano nomi italiani orientati alle attività, ad esempio “Linea a 2 punti”, “Penna Bézier” e “Ritaglia immagine”; i tooltip mantengono le scorciatoie effettive configurate dall’utente.
+- Verifiche locali su questa iterazione: `cargo fmt --all -- --check` e `cargo check --locked -j 1 -p vectorcraft-ui-egui --features opendraw --lib` completati. Sei test `opendraw_shell::tests` e Clippy OpenDraw erano verdi prima dell’aggiunta dei metadati del comando crop; il nuovo tentativo dei test locali è stato interrotto durante la ricompilazione estesa delle dipendenze. La pipeline della PR ripeterà i test, Clippy e la build Windows prima di macOS; non si dichiara ancora una nuova release pronta.
+
 Baseline: SHA 868c73e9faa0a53a8ad6b188760be0a583c8e636. Run desktop 38258069820 completato con entrambi gli artifact, ma run workspace 38258069935 fallito. Gli artifact baseline non contengono questa iterazione. Verifica runtime e confronto visivo della nuova build ancora richiesti prima di dichiarare pronta Alpha 3.

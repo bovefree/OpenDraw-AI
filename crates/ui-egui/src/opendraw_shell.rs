@@ -468,6 +468,20 @@ mod tests {
     }
 
     #[test]
+    fn classic_tool_groups_follow_a_print_design_workflow() {
+        let categories: Vec<_> = crate::toolbar::CLASSIC.iter().map(|(name, _)| *name).collect();
+        assert_eq!(categories.first(), Some(&"Puntatore"));
+        assert!(categories.contains(&"Forma") && categories.contains(&"Disegno") && categories.contains(&"Modifica"));
+        let group_of = |tool: &str| {
+            crate::toolbar::CLASSIC.iter().find_map(|(category, groups)| groups.iter().any(|group| group.contains(&tool)).then_some(*category))
+        };
+        assert_eq!(group_of("directSelection"), Some("Forma"));
+        assert_eq!(group_of("warp"), Some("Modifica"));
+        assert_eq!(group_of("lineCut"), Some("Ritaglia"));
+        assert_eq!(crate::toolbar::classic_tool_label("lineSegment"), Some("Linea a 2 punti"));
+    }
+
+    #[test]
     fn classic_menus_offer_working_commands_and_expose_missing_tables() {
         let tree = menus::menu_tree_named(false);
         let names: Vec<_> = tree.iter().map(|(name, _)| *name).collect();

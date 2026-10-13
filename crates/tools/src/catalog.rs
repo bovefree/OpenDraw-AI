@@ -16,6 +16,10 @@ const fn t(id: &'static str, label: &'static str, shortcut: Option<&'static str>
     ToolInfo { id, label, shortcut, icon }
 }
 
+/// Crop Image is a contextual tool (not part of the standard toolbar groups),
+/// but the OpenDraw Classic toolbox needs metadata to expose it in its crop flyout.
+const CROP_IMAGE: ToolInfo = t("cropImage", "Crop Image Tool", None, "tool-crop-image");
+
 /// Toolbar groups in order; the first tool of each group is the default visible one.
 pub const TOOL_GROUPS: &[&[ToolInfo]] = &[
     &[t("selection", "Selection Tool", Some("V"), "tool-selection")],
@@ -141,7 +145,7 @@ pub fn all_tools() -> impl Iterator<Item = &'static ToolInfo> {
 }
 
 pub fn tool_info(id: &str) -> Option<&'static ToolInfo> {
-    all_tools().find(|t| t.id == id)
+    if id == crate::cropimage::ID { Some(&CROP_IMAGE) } else { all_tools().find(|t| t.id == id) }
 }
 
 /// Tool for a single-key shortcut such as "V" or "Shift+M".
@@ -191,5 +195,6 @@ mod tests {
         assert_eq!(group_of("star"), group_of("rectangle"));
         assert!(is_selection_tool("groupSelection") && !is_selection_tool("pen"));
         assert!(edits_anchors("pen") && !edits_anchors("rectangle"));
+        assert_eq!(tool_info("cropImage").map(|t| t.icon), Some("tool-crop-image"));
     }
 }

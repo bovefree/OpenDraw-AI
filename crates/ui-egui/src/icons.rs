@@ -58,6 +58,7 @@ pub fn tool_icon(name: &str) -> &'static str {
         "tool-mirror-cut" => "dc-mirror-cut",
         "tool-line-cut" => "dc-line-cut",
         "tool-rect-cut" => "dc-rect-cut",
+        "tool-crop-image" => "dc-pf-crop",
         "tool-rotate" => "rotate-ccw",
         "tool-reflect" => "flip-horizontal-2",
         "tool-scale" => "scaling",
