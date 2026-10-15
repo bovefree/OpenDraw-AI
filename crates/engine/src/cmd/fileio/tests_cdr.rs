@@ -118,11 +118,37 @@ fn root_inventory_walks_lists_and_rejects_invalid_lengths() {
     root.extend_from_slice(&nested);
     assert_eq!(
         cdr::inspect_root(&root).unwrap(),
-        cdr::RootInventory { pages: 1, layers: 1, objects: 1, groups: 0, external_references: 0, external_bytes: 0 }
+        cdr::RootInventory { version: None, pages: 1, layers: 1, objects: 1, groups: 0, external_references: 0, external_bytes: 0 }
     );
 
     root[4..8].copy_from_slice(&u32::MAX.to_le_bytes());
     assert!(cdr::inspect_root(&root).is_err());
+}
+
+#[test]
+fn root_inventory_reads_modern_cdr_version_from_local_record() {
+    fn chunk(tag: &[u8; 4], data: &[u8]) -> Vec<u8> {
+        let mut out = tag.to_vec();
+        out.extend_from_slice(&(data.len() as u32).to_le_bytes());
+        out.extend_from_slice(data);
+        out
+    }
+    let mut fver = Vec::new();
+    fver.extend_from_slice(&u32::MAX.to_le_bytes());
+    fver.extend_from_slice(&8u32.to_le_bytes());
+    fver.extend_from_slice(&2700u16.to_le_bytes());
+    fver.extend_from_slice(&1u16.to_le_bytes());
+    fver.extend_from_slice(&0u16.to_le_bytes());
+    fver.extend_from_slice(&27u16.to_le_bytes());
+    let version = chunk(b"fver", &fver);
+    let page = chunk(b"LIST", b"page");
+    let mut root = b"RIFF".to_vec();
+    root.extend_from_slice(&((4 + version.len() + page.len()) as u32).to_le_bytes());
+    root.extend_from_slice(b"CDRU");
+    root.extend_from_slice(&version);
+    root.extend_from_slice(&page);
+
+    assert_eq!(cdr::inspect_root(&root).unwrap().version, Some(2700));
 }
 
 #[test]
@@ -150,7 +176,7 @@ fn root_inventory_validates_external_stream_ranges() {
     let streams = [cdr::DataStream { name: "page1.dat".into(), size: 8 }];
     assert_eq!(
         cdr::inspect_root_with_streams(&root, &streams).unwrap(),
-        cdr::RootInventory { pages: 1, layers: 0, objects: 0, groups: 0, external_references: 1, external_bytes: 4 }
+        cdr::RootInventory { version: None, pages: 1, layers: 0, objects: 0, groups: 0, external_references: 1, external_bytes: 4 }
     );
     let short_stream = [cdr::DataStream { name: "page1.dat".into(), size: 7 }];
     assert!(cdr::inspect_root_with_streams(&root, &short_stream).is_err());

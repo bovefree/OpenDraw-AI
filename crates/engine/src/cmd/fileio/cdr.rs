@@ -29,6 +29,7 @@ pub(super) struct Imported {
 
 #[derive(Default, Debug, PartialEq, Eq)]
 pub(super) struct RootInventory {
+    pub version: Option<u16>,
     pub pages: usize,
     pub layers: usize,
     pub objects: usize,
@@ -119,8 +120,14 @@ pub(super) fn import(name: &str, bytes: &[u8]) -> Result<Imported> {
     Ok(Imported {
         doc,
         warnings: vec![format!(
-            "CDR opened as page previews only. The native root contains {} page records, {} layers, {} objects and {} groups; {} references to {} bytes of external drawing data were validated, but their artwork is not imported yet. Vectors, editable text, fills and effects are unavailable; do not save over the source. Full CDR object import is still in development.",
-            inventory.pages, inventory.layers, inventory.objects, inventory.groups, inventory.external_references, inventory.external_bytes
+            "CDR opened as page previews only. The native root identifies version {} and contains {} page records, {} layers, {} objects and {} groups; {} references to {} bytes of external drawing data were validated, but their artwork is not imported yet. Vectors, editable text, fills and effects are unavailable; do not save over the source. Full CDR object import is still in development.",
+            inventory.version.map_or_else(|| "unknown".to_string(), |v| format!("{}.{}", v / 100, v % 100)),
+            inventory.pages,
+            inventory.layers,
+            inventory.objects,
+            inventory.groups,
+            inventory.external_references,
+            inventory.external_bytes
         )],
     })
 }
@@ -199,6 +206,18 @@ fn walk_riff(
             let stream_index = u32::from_le_bytes(data[header_end..header_end + 4].try_into().map_err(err)?);
             let length = u32::from_le_bytes(data[header_end + 4..header_end + 8].try_into().map_err(err)?) as u64;
             let offset = u32::from_le_bytes(data[header_end + 8..header_end + 12].try_into().map_err(err)?) as u64;
+            if tag == b"fver" && stream_index == u32::MAX {
+                // In the current ZIP container, a local (non-external) record keeps its body
+                // after the 8-byte stream/length prefix. fver starts with the numeric CDR version.
+                let local_end = header_end
+                    .checked_add(8)
+                    .and_then(|start| start.checked_add(length as usize))
+                    .ok_or_else(|| err("CDR version record range overflow"))?;
+                if length < 2 || local_end > payload_end {
+                    return Err(err("truncated CDR version record"));
+                }
+                inventory.version = Some(u16::from_le_bytes(data[header_end + 8..header_end + 10].try_into().map_err(err)?));
+            }
             if stream_index != u32::MAX {
                 inventory.external_references =
                     inventory.external_references.checked_add(1).ok_or_else(|| err("CDR external reference count overflow"))?;
