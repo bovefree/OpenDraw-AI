@@ -20,6 +20,42 @@ fn package(pages: usize) -> Vec<u8> {
     zip::store(&files).unwrap()
 }
 
+fn package_with_external_reference(stream_name: &str) -> Vec<u8> {
+    fn chunk(tag: &[u8; 4], body: &[u8]) -> Vec<u8> {
+        let mut out = tag.to_vec();
+        out.extend_from_slice(&(body.len() as u32).to_le_bytes());
+        out.extend_from_slice(body);
+        if body.len() & 1 != 0 {
+            out.push(0);
+        }
+        out
+    }
+    let mut reference = Vec::new();
+    reference.extend_from_slice(&0u32.to_le_bytes()); // stream index
+    reference.extend_from_slice(&4u32.to_le_bytes()); // body length
+    reference.extend_from_slice(&4u32.to_le_bytes()); // body offset
+    reference.extend_from_slice(&0u32.to_le_bytes()); // reserved
+    let record = chunk(b"loda", &reference);
+    let mut page = b"page".to_vec();
+    page.extend_from_slice(&record);
+    let page = chunk(b"LIST", &page);
+    let mut root = b"RIFF".to_vec();
+    root.extend_from_slice(&((4 + page.len()) as u32).to_le_bytes());
+    root.extend_from_slice(b"CDRU");
+    root.extend_from_slice(&page);
+
+    let mut png = Vec::new();
+    image::RgbaImage::from_pixel(2, 2, image::Rgba([0, 0, 0, 255])).write_to(&mut std::io::Cursor::new(&mut png), image::ImageFormat::Png).unwrap();
+    let files: Vec<(String, Vec<u8>)> = vec![
+        ("mimetype".into(), b"application/x-vnd.corel.zcf.draw.document+zip".to_vec()),
+        ("content/root.dat".into(), root),
+        ("content/dataFileList.dat".into(), format!("{stream_name}\n").into_bytes()),
+        ("content/data/page1.dat".into(), vec![0; 8]),
+        ("previews/page1.png".into(), png),
+    ];
+    zip::store(&files).unwrap()
+}
+
 #[test]
 fn cdr_is_detected_by_package_contents_and_lists_supported_extension() {
     let bytes = package(1);
@@ -80,10 +116,59 @@ fn root_inventory_walks_lists_and_rejects_invalid_lengths() {
     root.extend_from_slice(&((4 + nested.len()) as u32).to_le_bytes());
     root.extend_from_slice(b"CDRU");
     root.extend_from_slice(&nested);
-    assert_eq!(cdr::inspect_root(&root).unwrap(), cdr::RootInventory { pages: 1, layers: 1, objects: 1, groups: 0 });
+    assert_eq!(
+        cdr::inspect_root(&root).unwrap(),
+        cdr::RootInventory { pages: 1, layers: 1, objects: 1, groups: 0, external_references: 0, external_bytes: 0 }
+    );
 
     root[4..8].copy_from_slice(&u32::MAX.to_le_bytes());
     assert!(cdr::inspect_root(&root).is_err());
+}
+
+#[test]
+fn root_inventory_validates_external_stream_ranges() {
+    fn chunk(tag: &[u8; 4], data: &[u8]) -> Vec<u8> {
+        let mut out = tag.to_vec();
+        out.extend_from_slice(&(data.len() as u32).to_le_bytes());
+        out.extend_from_slice(data);
+        out
+    }
+    let mut reference = Vec::new();
+    reference.extend_from_slice(&0u32.to_le_bytes());
+    reference.extend_from_slice(&4u32.to_le_bytes());
+    reference.extend_from_slice(&4u32.to_le_bytes());
+    reference.extend_from_slice(&0u32.to_le_bytes());
+    let record = chunk(b"loda", &reference);
+    let mut page = b"page".to_vec();
+    page.extend_from_slice(&record);
+    let page = chunk(b"LIST", &page);
+    let mut root = b"RIFF".to_vec();
+    root.extend_from_slice(&((4 + page.len()) as u32).to_le_bytes());
+    root.extend_from_slice(b"CDRU");
+    root.extend_from_slice(&page);
+
+    let streams = [cdr::DataStream { name: "page1.dat".into(), size: 8 }];
+    assert_eq!(
+        cdr::inspect_root_with_streams(&root, &streams).unwrap(),
+        cdr::RootInventory { pages: 1, layers: 0, objects: 0, groups: 0, external_references: 1, external_bytes: 4 }
+    );
+    let short_stream = [cdr::DataStream { name: "page1.dat".into(), size: 7 }];
+    assert!(cdr::inspect_root_with_streams(&root, &short_stream).is_err());
+    assert!(cdr::inspect_root_with_streams(&root, &[]).is_err());
+}
+
+#[test]
+fn cdr_package_resolves_ordered_external_stream_members() {
+    let bytes = package_with_external_reference("page1.dat");
+    let loaded = load("external.cdr", &bytes).unwrap();
+    assert_eq!(loaded.doc.artboards.len(), 1);
+    assert!(loaded.warnings[0].contains("1 references to 4 bytes"));
+
+    let missing = package_with_external_reference("missing.dat");
+    assert!(load("missing.cdr", &missing).is_err());
+
+    let blank_line = package_with_external_reference("page1.dat\n");
+    assert!(load("blank-line.cdr", &blank_line).is_err());
 }
 
 #[test]
