@@ -293,4 +293,3 @@ fn decode_preview(bytes: &[u8]) -> Result<image::RgbaImage> {
     reader.limits(limits);
     reader.decode().map(|i| i.to_rgba8()).map_err(err)
 }
-
