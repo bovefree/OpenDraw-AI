@@ -105,8 +105,10 @@ pub(super) fn import(name: &str, bytes: &[u8]) -> Result<Imported> {
             id,
             NodeKind::Image(Box::new(ImageObject { key: key.clone(), width: w, height: h, xf, link: None, placement: Default::default() })),
         );
-        let width_pt = f64::from(w) * 72.0 / 96.0;
-        let height_pt = f64::from(h) * 72.0 / 96.0;
+        // Page previews have no embedded physical page size; keep their pixel dimensions as the
+        // preview artboard size so the raster fills the artboard without inventing a DPI value.
+        let width_pt = f64::from(w);
+        let height_pt = f64::from(h);
         let rect = vectorcraft_geom::Rect::new(x, 0.0, x + width_pt, height_pt);
         boards.push(vectorcraft_doc::Artboard {
             id: page_label,
