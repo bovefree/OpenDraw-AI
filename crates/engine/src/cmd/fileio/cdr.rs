@@ -78,16 +78,18 @@ pub(super) fn import(name: &str, bytes: &[u8]) -> Result<Imported> {
     let layer = doc.layers.first().map(|n| n.id).ok_or_else(|| err("new document has no layer"))?;
     let mut total_pixels = 0u64;
     let mut x = 0.0;
-    for (i, entry) in previews.iter().enumerate() {
+    for entry in &previews {
+        let page = natural_page_number(&entry.name);
+        let page_label = if page == u32::MAX { boards.len() as u32 + 1 } else { page };
         if entry.uncompressed_size > MAX_PREVIEW {
-            return Err(err(format!("CDR page preview {} exceeds the 64 MiB safety limit", i + 1)));
+            return Err(err(format!("CDR page preview {page_label} exceeds the 64 MiB safety limit")));
         }
         let png = read_entry(bytes, &entry.name, MAX_PREVIEW as usize).map_err(err)?;
         let image = decode_preview(&png)?;
         let (w, h) = image.dimensions();
         let pixels = u64::from(w) * u64::from(h);
         if pixels > MAX_PIXELS {
-            return Err(err(format!("CDR page preview {} exceeds the pixel safety limit", i + 1)));
+            return Err(err(format!("CDR page preview {page_label} exceeds the pixel safety limit")));
         }
         total_pixels = total_pixels.checked_add(pixels).ok_or_else(|| err("CDR preview pixel count overflow"))?;
         if total_pixels > MAX_TOTAL_PIXELS {
@@ -103,10 +105,12 @@ pub(super) fn import(name: &str, bytes: &[u8]) -> Result<Imported> {
             id,
             NodeKind::Image(Box::new(ImageObject { key: key.clone(), width: w, height: h, xf, link: None, placement: Default::default() })),
         );
-        let rect = vectorcraft_geom::Rect::new(x, 0.0, x + f64::from(w), f64::from(h));
+        let width_pt = f64::from(w) * 72.0 / 96.0;
+        let height_pt = f64::from(h) * 72.0 / 96.0;
+        let rect = vectorcraft_geom::Rect::new(x, 0.0, x + width_pt, height_pt);
         boards.push(vectorcraft_doc::Artboard {
-            id: i as u32 + 1,
-            name: format!("Page {} (preview)", i + 1),
+            id: page_label,
+            name: format!("Page {page_label} (preview)"),
             rect,
             show_center_mark: false,
             show_cross_hairs: false,
@@ -114,7 +118,7 @@ pub(super) fn import(name: &str, bytes: &[u8]) -> Result<Imported> {
         let index = doc.layers.first().and_then(|n| n.children()).map_or(0, |children| children.len());
         doc.insert(Some(layer), index, node).map_err(err)?;
         doc.images.insert(key, blob);
-        x += f64::from(w) + 36.0;
+        x += width_pt + 36.0;
     }
     doc.artboards = boards;
     Ok(Imported {
@@ -274,7 +278,7 @@ fn data_streams(bytes: &[u8], entries: &[super::zip::Entry]) -> Result<Vec<DataS
 }
 
 fn natural_page_number(name: &str) -> u32 {
-    let digits = name.rsplit('/').next().unwrap_or_default().trim_start_matches("page").trim_end_matches(".png");
+    let digits = name.rsplit('/').next().unwrap_or_default().strip_prefix("page").unwrap_or_default().strip_suffix(".png").unwrap_or_default();
     digits.parse().unwrap_or(u32::MAX)
 }
 
@@ -287,3 +291,4 @@ fn decode_preview(bytes: &[u8]) -> Result<image::RgbaImage> {
     reader.limits(limits);
     reader.decode().map(|i| i.to_rgba8()).map_err(err)
 }
+
