@@ -2,6 +2,7 @@
 
 use proptest::prelude::*;
 use serde_json::json;
+use vectorcraft_doc::NodeKind;
 
 use super::*;
 
@@ -84,6 +85,38 @@ fn opens_each_page_as_a_preview_artboard_with_clear_loss_warning() {
     let state = from_path.doc().unwrap();
     assert_eq!(state.imported_from.as_deref(), Some("sample.cdr"));
     assert!(check_not_lossy_overwrite(state, "sample.cdr", &json!({}), "document.save").is_err());
+}
+
+#[test]
+fn page_preview_names_use_real_page_numbers_and_keep_each_preview_scale() {
+    let mut large = Vec::new();
+    image::RgbaImage::from_pixel(12, 20, image::Rgba([60, 120, 180, 255]))
+        .write_to(&mut std::io::Cursor::new(&mut large), image::ImageFormat::Png)
+        .unwrap();
+    let mut small = Vec::new();
+    image::RgbaImage::from_pixel(3, 4, image::Rgba([90, 120, 150, 255]))
+        .write_to(&mut std::io::Cursor::new(&mut small), image::ImageFormat::Png)
+        .unwrap();
+    let files: Vec<(String, Vec<u8>)> = vec![
+        ("mimetype".into(), b"application/x-vnd.corel.zcf.draw.document+zip".to_vec()),
+        ("content/root.dat".into(), b"RIFF\x04\0\0\0CDRU".to_vec()),
+        ("previews/page3.png".into(), large),
+        ("previews/page4.png".into(), small),
+    ];
+    let loaded = load("numbered.cdr", &zip::store(&files).unwrap()).unwrap();
+    assert_eq!(loaded.doc.artboards.iter().map(|b| (b.id, b.name.as_str())).collect::<Vec<_>>(), [(3, "Page 3 (preview)"), (4, "Page 4 (preview)")]);
+    assert_eq!(loaded.doc.artboards[0].rect.height(), 15.0);
+    assert_eq!(loaded.doc.artboards[1].rect.height(), 3.0);
+    let dimensions = loaded.doc.layers[0]
+        .children()
+        .unwrap()
+        .iter()
+        .filter_map(|node| match &node.kind {
+            NodeKind::Image(image) => Some((image.width, image.height)),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(dimensions, [(12, 20), (3, 4)]);
 }
 
 #[test]
@@ -225,3 +258,4 @@ proptest! {
         let _ = load("mutated.cdr", &bytes);
     }
 }
+
