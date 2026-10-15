@@ -66,6 +66,9 @@ pub fn detect(name: &str, bytes: &[u8]) -> Option<&'static Format> {
     if vectorcraft_affinity::is_affinity(bytes) {
         return format("affinity");
     }
+    if super::cdr::is_cdr(bytes) {
+        return format("cdr");
+    }
     if vectorcraft_format::sniff(bytes) {
         // A template keeps its meaning from the extension, like .ait.
         return by_name.filter(|f| f.id == "template").or_else(|| format("vectorcraft"));
@@ -238,6 +241,11 @@ pub fn load_with(name: &str, bytes: &[u8], opts: &LoadOptions) -> Result<Loaded>
         "affinity" => {
             let i = super::affinity::import(&title, bytes)?;
             preview_only = i.preview_only;
+            (i.doc, i.warnings, false)
+        }
+        "cdr" => {
+            let i = super::cdr::import(&title, bytes)?;
+            preview_only = true;
             (i.doc, i.warnings, false)
         }
         _ if format.raster => (raster_doc(&title, bytes)?, vec![], false),
@@ -458,7 +466,7 @@ pub(super) fn raster_doc(name: &str, bytes: &[u8]) -> Result<Document> {
 
 /// Does this import note say that the file has something the document doesn't?
 fn is_loss(note: &str) -> bool {
-    note == vectorcraft_pdf::OFF_ARTBOARD_NOTE || vectorcraft_eps::is_loss(note)
+    note == vectorcraft_pdf::OFF_ARTBOARD_NOTE || vectorcraft_eps::is_loss(note) || note.starts_with("CDR opened as page previews only")
 }
 
 /// Writing the file `target` for document `st`: not over the file `st` was read from when reading

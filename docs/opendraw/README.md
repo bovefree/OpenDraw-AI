@@ -2,7 +2,7 @@
 
 OpenDraw AI è una derivazione sperimentale di [VectorCraft](https://github.com/storytold/vectorcraft), destinata a Windows e macOS. L'obiettivo è aggiungere un flusso di lavoro per impaginazione e stampa, interfaccia in italiano e interoperabilità con CorelDRAW, preservando l'architettura Rust e la possibilità di automazione MCP.
 
-> Stato: avvio progetto. Il fork contiene attualmente il codice VectorCraft; non è ancora stato rinominato né pubblicato come prodotto OpenDraw AI. Nessuna compatibilità CDR è stata implementata.
+> Stato: sviluppo sperimentale. Il fork usa ancora il codice e il marchio VectorCraft. CDR apre per ora solo miniature di pagina con avviso esplicito; l’importazione modificabile non è ancora disponibile.
 
 ## Principi tecnici
 
@@ -20,7 +20,7 @@ OpenDraw AI è una derivazione sperimentale di [VectorCraft](https://github.com/
 | OD-002 | Identità OpenDraw AI | Nome, icone originali, dati applicazione e cartelle configurazione dedicati; test di avvio e salvataggio |
 | OD-003 | Preset di stampa | Nuovo documento 1400 × 2000 mm, abbondanza configurabile, export PDF/X-4 e controllo dimensioni |
 | OD-004 | Test interoperabilità | Corpus di SVG/PDF di riferimento, controlli su livelli, testi, gradienti e immagini; rapporti di perdita |
-| OD-005 | Ricerca import CDR | Valutare formati e librerie esistenti con licenze compatibili; creare importatore solo dopo verifica documentale e corpus autorizzato |
+| OD-005 | Import CDR | Lettore ZIP controllato e anteprima multipagina; prossimo traguardo: parsing clean-room di root/page RIFF e importazione di forme native verificata su file autorizzati |
 | OD-006 | Automazione AI | Esporre e testare workflow di impaginazione e adattamento formati usando gli strumenti MCP esistenti |
 
 ## Primo documento campione

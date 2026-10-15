@@ -32,6 +32,14 @@ La build Rust del progetto oggi non ha una catena C++/libcdr. Integrare una libr
 5. **Sicurezza del parser:** introdurre limiti su decompressione, conteggi, annidamento e immagini, fuzzare gli stream corrotti e assicurare che nessun file ostile arresti l’app. Aggiungere test sintetici per detection, pagine, livelli, testo, bitmap e avvisi di perdita.
 6. **Release:** dopo la scelta del backend, compilare e testare Windows x64 per primo; macOS ARM64 deve partire soltanto dopo il successo Windows, aggiornando pacchetti, attributi file e NOTICE.
 
-## Decisione attuale
+## Prova locale del campione e stato dell’importatore
 
-È giustificato procedere con una **fase di fattibilità e corpus**, non dichiarare ora supporto CDR 2026 e non aggiungere ancora un backend non verificato. Il prossimo deliverable tecnico dovrebbe essere una prova d’importazione controllata di un documento sintetico multi-pagina con testo, forme, riempimenti e bitmap, seguita da uno o più CDR reali dell’utente in locale, senza commit dei file. Solo i risultati della matrice consentiranno di fissare un obiettivo di fedeltà e passare all’integrazione nell’apertura e nel dialogo di importazione.
+Verifica locale del 2026-10-15: il documento fornito dall’utente è un archivio ZIP CDR moderno da circa 67,7 MB. Contiene `content/root.dat` con un flusso RIFF `CDRU`, `content/data/page1.dat` … `page38.dat`, 38 miniature di pagina e 96 voci complessive. Il file resta fuori dal repository e non viene usato in CI.
+
+OpenDraw ora riconosce `.cdr` dal MIME di archivio e dalla firma del flusso root, elenca l’estensione in Open e Place e apre le miniature di tutte le pagine come tavole raster separate. Il documento è marcato come anteprima, non può essere piazzato come vettoriale, non mantiene un percorso di salvataggio CDR e avvisa che vettori, testo, livelli, riempimenti ed effetti non sono stati importati. L’origine e la perdita vengono conservate per impedire la sovrascrittura del sorgente. Il lettore ZIP limita conteggi, dimensioni decompresse, miniature e pixel totali e controlla CRC, percorsi e intestazioni.
+
+Questa è una prima apertura visiva, non l’importazione CDR richiesta in forma modificabile. Per il passaggio successivo serve leggere i chunk RIFF e i riferimenti `dataFileList.dat`/`page*.dat`, ricostruire struttura e coordinate, poi mappare gli oggetti supportati su `vectorcraft-doc`. I test automatici usano pacchetti sintetici e verificano detection, anteprime multipagina, protezione del sorgente, rifiuto di pacchetti corrotti e mutazioni casuali del contenitore. Prima di dichiarare compatibilità CDR 2026 occorre aggiungere test d’integrazione locali su più campioni posseduti dall’utente e misurare pagine, livelli, curve, testo, immagini e riempimenti.
+
+## Decisione sul backend
+
+Non è giustificato aggiungere ora una dipendenza C++ non verificata: il campione recente supera la copertura dichiarata di alcuni parser Rust consultati, mentre l’integrazione `libcdr` richiederebbe un bridge e pacchetti di dipendenze per entrambi i sistemi operativi senza garanzia di compatibilità con il formato 2026. Proseguire con l’analisi clean-room dei flussi e usare questo campione localmente come oracle visivo consentito, mai come fixture o dato di CI.
