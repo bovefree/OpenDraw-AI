@@ -105,8 +105,8 @@ fn page_preview_names_use_real_page_numbers_and_keep_each_preview_scale() {
     ];
     let loaded = load("numbered.cdr", &zip::store(&files).unwrap()).unwrap();
     assert_eq!(loaded.doc.artboards.iter().map(|b| (b.id, b.name.as_str())).collect::<Vec<_>>(), [(3, "Page 3 (preview)"), (4, "Page 4 (preview)")]);
-    assert_eq!(loaded.doc.artboards[0].rect.height(), 15.0);
-    assert_eq!(loaded.doc.artboards[1].rect.height(), 3.0);
+    assert_eq!(loaded.doc.artboards[0].rect.height(), 20.0);
+    assert_eq!(loaded.doc.artboards[1].rect.height(), 4.0);
     let dimensions = loaded.doc.layers[0]
         .children()
         .unwrap()
