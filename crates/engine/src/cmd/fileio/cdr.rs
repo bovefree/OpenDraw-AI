@@ -17,10 +17,20 @@ const MAX_UNCOMPRESSED: u64 = 512 * 1024 * 1024;
 const MAX_PREVIEW: u64 = 64 * 1024 * 1024;
 const MAX_PIXELS: u64 = 32 * 1024 * 1024;
 const MAX_TOTAL_PIXELS: u64 = 64 * 1024 * 1024;
+const MAX_RIFF_CHUNKS: usize = 50_000;
+const MAX_RIFF_DEPTH: usize = 128;
 
 pub(super) struct Imported {
     pub doc: Document,
     pub warnings: Vec<String>,
+}
+
+#[derive(Default, Debug, PartialEq, Eq)]
+pub(super) struct RootInventory {
+    pub pages: usize,
+    pub layers: usize,
+    pub objects: usize,
+    pub groups: usize,
 }
 
 /// Identify a ZIP-based CDR by its MIME entry or the CDR signature in its native root stream.
@@ -36,10 +46,11 @@ pub(super) fn import(name: &str, bytes: &[u8]) -> Result<Imported> {
         return Err(err("unsupported CDR package type"));
     }
     let root = entries.iter().find(|e| e.name == "content/root.dat").ok_or_else(|| err("CDR package has no content/root.dat"))?;
-    if root.uncompressed_size > 16 * 1024 * 1024 || read_entry(bytes, "content/root.dat", 16 * 1024 * 1024).map_err(err)?.get(8..12) != Some(b"CDRU")
-    {
+    if root.uncompressed_size > 16 * 1024 * 1024 {
         return Err(err("unrecognized CDR root stream"));
     }
+    let root_bytes = read_entry(bytes, "content/root.dat", 16 * 1024 * 1024).map_err(err)?;
+    let inventory = inspect_root(&root_bytes)?;
     let mut previews = entries.iter().filter(|e| e.name.starts_with("previews/page") && e.name.ends_with(".png")).collect::<Vec<_>>();
     previews.sort_by_key(|e| natural_page_number(&e.name));
     if previews.is_empty() {
@@ -96,8 +107,71 @@ pub(super) fn import(name: &str, bytes: &[u8]) -> Result<Imported> {
     doc.artboards = boards;
     Ok(Imported {
         doc,
-        warnings: vec!["CDR opened as page previews only. Vectors, editable text, layers, fills and effects have not been imported; do not save over the source. Full CDR object import is still in development.".into()],
+        warnings: vec![format!(
+            "CDR opened as page previews only. The native root contains {} page records, {} layers, {} objects and {} groups, but their artwork is not imported yet. Vectors, editable text, fills and effects are unavailable; do not save over the source. Full CDR object import is still in development.",
+            inventory.pages, inventory.layers, inventory.objects, inventory.groups
+        )],
     })
+}
+
+/// Validate and inventory the standard RIFF hierarchy in a modern CDR root stream. This is a
+/// bounded structural pass only: artwork payloads live in separate page streams and are not
+/// interpreted here.
+pub(super) fn inspect_root(data: &[u8]) -> Result<RootInventory> {
+    if data.get(..4) != Some(b"RIFF") || data.get(8..12) != Some(b"CDRU") {
+        return Err(err("unrecognized CDR root stream"));
+    }
+    let declared = u32::from_le_bytes(data.get(4..8).ok_or_else(|| err("truncated CDR RIFF header"))?.try_into().map_err(err)?) as usize;
+    let end = declared.checked_add(8).ok_or_else(|| err("CDR RIFF size overflow"))?;
+    if end > data.len() || end < 12 {
+        return Err(err("CDR RIFF length exceeds the root stream"));
+    }
+    let mut inventory = RootInventory::default();
+    let mut chunks = 0usize;
+    walk_riff(data, 12, end, 0, &mut chunks, &mut inventory)?;
+    Ok(inventory)
+}
+
+fn walk_riff(data: &[u8], start: usize, end: usize, depth: usize, chunks: &mut usize, inventory: &mut RootInventory) -> Result<()> {
+    if depth > MAX_RIFF_DEPTH {
+        return Err(err("CDR RIFF nesting exceeds the safety limit"));
+    }
+    let mut pos = start;
+    while pos < end {
+        *chunks = chunks.checked_add(1).ok_or_else(|| err("CDR RIFF chunk count overflow"))?;
+        if *chunks > MAX_RIFF_CHUNKS {
+            return Err(err("CDR RIFF has too many chunks"));
+        }
+        let header_end = pos.checked_add(8).ok_or_else(|| err("CDR RIFF offset overflow"))?;
+        if header_end > end {
+            return Err(err("truncated CDR RIFF chunk header"));
+        }
+        let tag = &data[pos..pos + 4];
+        let size = u32::from_le_bytes(data[pos + 4..header_end].try_into().map_err(err)?) as usize;
+        let payload_end = header_end.checked_add(size).ok_or_else(|| err("CDR RIFF chunk size overflow"))?;
+        if payload_end > end {
+            return Err(err("CDR RIFF chunk exceeds its parent"));
+        }
+        if tag == b"LIST" {
+            if size < 4 {
+                return Err(err("CDR RIFF LIST chunk has no list type"));
+            }
+            let kind = &data[header_end..header_end + 4];
+            match kind {
+                b"page" => inventory.pages += 1,
+                b"layr" => inventory.layers += 1,
+                b"obj " => inventory.objects += 1,
+                b"grp " | b"lnkg" => inventory.groups += 1,
+                _ => {}
+            }
+            walk_riff(data, header_end + 4, payload_end, depth + 1, chunks, inventory)?;
+        }
+        pos = payload_end.checked_add(size & 1).ok_or_else(|| err("CDR RIFF offset overflow"))?;
+        if pos > end {
+            return Err(err("truncated CDR RIFF chunk padding"));
+        }
+    }
+    Ok(())
 }
 
 fn natural_page_number(name: &str) -> u32 {

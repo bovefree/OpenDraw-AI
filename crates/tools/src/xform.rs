@@ -1,5 +1,5 @@
 //! Transform and utility tools (rotate/reflect/scale/shear, free transform, eyedropper, gradient,
-//! artboard, magic wand, lasso, measure).
+//! drop shadow, artboard, magic wand, lasso, measure).
 //!
 //! Like every tool they only emit actions: transforms preview `object.transform` / `object.distort`
 //! on the interaction snapshot, the utility tools execute selection / paint / artboard commands.
@@ -10,6 +10,7 @@ mod free;
 mod freeform;
 mod gradient;
 mod measure;
+mod drop_shadow;
 mod transform;
 mod wand;
 
@@ -22,6 +23,7 @@ pub use artboard::ArtboardTool;
 pub use eyedropper::EyedropperTool;
 pub use free::{DistortMode, FreeTransformTool};
 pub use gradient::GradientTool;
+pub use drop_shadow::DropShadowTool;
 pub use measure::MeasureTool;
 pub use transform::{TransformKind, TransformTool};
 pub use wand::{LassoTool, MagicWandTool};
@@ -36,6 +38,7 @@ pub fn create(id: &str) -> Option<Box<dyn Tool>> {
         "freeTransform" => Box::new(FreeTransformTool::default()),
         "eyedropper" => Box::new(EyedropperTool::default()),
         "gradient" => Box::new(GradientTool::default()),
+        "dropShadow" => Box::new(DropShadowTool::default()),
         "artboard" => Box::new(ArtboardTool::default()),
         "magicWand" => Box::new(MagicWandTool),
         "lasso" => Box::new(LassoTool::default()),

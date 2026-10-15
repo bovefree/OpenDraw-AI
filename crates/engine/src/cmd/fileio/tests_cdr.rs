@@ -8,7 +8,7 @@ use super::*;
 fn package(pages: usize) -> Vec<u8> {
     let mut files = vec![
         ("mimetype".to_string(), b"application/x-vnd.corel.zcf.draw.document+zip".to_vec()),
-        ("content/root.dat".to_string(), b"RIFF\x20\0\0\0CDRU".to_vec()),
+        ("content/root.dat".to_string(), b"RIFF\x04\0\0\0CDRU".to_vec()),
     ];
     for i in 1..=pages {
         let mut png = Vec::new();
@@ -57,6 +57,45 @@ fn malformed_or_non_cdr_zip_is_rejected_without_panicking() {
     let mut bytes = package(1);
     bytes[0] ^= 1;
     assert!(load("bad.cdr", &bytes).is_err());
+}
+
+#[test]
+fn root_inventory_walks_lists_and_rejects_invalid_lengths() {
+    fn chunk(tag: &[u8; 4], data: &[u8]) -> Vec<u8> {
+        let mut out = tag.to_vec();
+        out.extend_from_slice(&(data.len() as u32).to_le_bytes());
+        out.extend_from_slice(data);
+        if data.len() & 1 != 0 {
+            out.push(0);
+        }
+        out
+    }
+    fn list(kind: &[u8; 4], children: &[u8]) -> Vec<u8> {
+        let mut body = kind.to_vec();
+        body.extend_from_slice(children);
+        chunk(b"LIST", &body)
+    }
+    let nested = list(b"page", &list(b"layr", &list(b"obj ", &[])));
+    let mut root = b"RIFF".to_vec();
+    root.extend_from_slice(&((4 + nested.len()) as u32).to_le_bytes());
+    root.extend_from_slice(b"CDRU");
+    root.extend_from_slice(&nested);
+    assert_eq!(cdr::inspect_root(&root).unwrap(), cdr::RootInventory { pages: 1, layers: 1, objects: 1, groups: 0 });
+
+    root[4..8].copy_from_slice(&u32::MAX.to_le_bytes());
+    assert!(cdr::inspect_root(&root).is_err());
+}
+
+#[test]
+fn places_a_selected_cdr_page_as_a_warned_raster_preview() {
+    let bytes = package(2);
+    let mut s = Session::new();
+    s.execute("document.open", &json!({"name":"sample.cdr", "dataBase64":vectorcraft_format::base64_encode(&bytes)})).unwrap();
+    let before = s.doc().unwrap().doc.node_count();
+    let placed = s.execute("file.place", &json!({"name":"sample.cdr", "dataBase64":vectorcraft_format::base64_encode(&bytes), "page":2})).unwrap();
+    assert_eq!(placed["format"], "cdr");
+    assert!(placed["warnings"][0].as_str().unwrap().contains("page previews only"));
+    assert!(s.doc().unwrap().doc.node_count() > before);
 }
 
 proptest! {

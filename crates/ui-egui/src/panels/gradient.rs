@@ -422,9 +422,12 @@ fn thumbnail(app: &mut VectorcraftApp, ui: &mut Ui, g: &GradientPaint, is_grad: 
 fn stop_fields(app: &mut VectorcraftApp, ui: &mut Ui, g: &Gradient, is_grad: bool) {
     let stops = &g.stops;
     let sel = app.session.selected_stop().filter(|i| *i < stops.len() && is_grad);
+    // A freshly applied gradient has no selected stop yet. Keep its first stop editable in the
+    // panel so users can change endpoint colours without first finding a tiny handle on the canvas.
+    let color_i = sel.or_else(|| (is_grad && !stops.is_empty()).then_some(0));
     let mid = selected_mid(app, ui.ctx(), stops.len()).filter(|_| is_grad);
-    let stop = sel.map(|i| &stops[i]);
-    if let (Some(i), Some(s)) = (sel, stop) {
+    let stop = color_i.map(|i| &stops[i]);
+    if let (Some(i), Some(s)) = (color_i, stop) {
         ui.horizontal(|ui| {
             widgets::dim_label(ui, tl!("Color:"));
             let (r, resp) = ui.allocate_exact_size(vec2(18.0, 18.0), Sense::click());
@@ -435,7 +438,7 @@ fn stop_fields(app: &mut VectorcraftApp, ui: &mut Ui, g: &Gradient, is_grad: boo
                 None => s.color.to_hex().to_uppercase(),
             };
             widgets::dim_name(ui, &label);
-            if resp.on_hover_text(tl!("Edit the stop")).clicked() {
+            if resp.on_hover_text(tl!("Edit this gradient stop's color")).clicked() {
                 open_popover(app, i, r.left_bottom() + vec2(0.0, 4.0));
             }
             ui.add_space(ui.available_width() - 22.0);
@@ -872,6 +875,21 @@ mod tests {
         p.click(&mut app, fill.left_top() + vec2(2.0, 2.0));
         assert!(app.session.fill_active, "the proxy works with the options hidden");
         p.widget(("grad-stop", 1));
+    }
+
+    #[test]
+    fn a_gradient_color_can_be_opened_before_a_stop_is_selected() {
+        let mut app = app(json!({"gradient": {}}));
+        assert_eq!(app.session.selected_stop(), None);
+        let mut p = Panel::new();
+        let texts = p.frame(&mut app, vec![], Modifiers::NONE);
+        let label = texts.iter().find(|(t, _)| t == "Color:").expect("the first stop color is exposed").1;
+        let chip = p.row_after(label, 18.0).into_iter().next().expect("the first stop color swatch");
+        p.click(&mut app, chip.center());
+        assert_eq!(app.session.selected_stop(), Some(0));
+        let dialog = app.ui.dialog.as_ref().expect("the color chooser opened");
+        assert_eq!((dialog.kind.as_str(), dialog.fields["index"].as_u64()), ("gradientStop", Some(0)));
+        assert_eq!(dialog.fields["tab"], "color");
     }
 
     #[test]

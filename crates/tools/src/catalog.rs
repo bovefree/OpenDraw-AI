@@ -1,4 +1,4 @@
-//! The tool catalogue: ids, labels, shortcuts and toolbar groups (Illustrator's Advanced toolbar order).
+//! The tool catalogue: ids, labels, shortcuts and toolbar groups.
 
 use serde::Serialize;
 
@@ -103,7 +103,7 @@ pub const TOOL_GROUPS: &[&[ToolInfo]] = &[
         t("perspectiveSelection", "Perspective Selection Tool", Some("Shift+V"), "tool-perspective-select"),
     ],
     &[t("mesh", "Mesh Tool", Some("U"), "tool-mesh")],
-    &[t("gradient", "Gradient Tool", Some("G"), "tool-gradient")],
+    &[t("gradient", "Gradient Tool", Some("G"), "tool-gradient"), t("dropShadow", "Drop Shadow Tool", None, "tool-drop-shadow")],
     &[t("eyedropper", "Eyedropper Tool", Some("I"), "tool-eyedropper"), t("measure", "Measure Tool", None, "tool-measure")],
     &[t("blend", "Blend Tool", Some("W"), "tool-blend")],
     &[

@@ -81,6 +81,7 @@ pub fn tool_icon(name: &str) -> &'static str {
         "tool-perspective-select" => "dc-perspective",
         "tool-mesh" => "dc-mesh",
         "tool-gradient" => "dc-gradient",
+        "tool-drop-shadow" => "dc-drop-shadow",
         "tool-eyedropper" => "pipette",
         "tool-measure" => "dc-measure",
         "tool-blend" => "dc-blend",
