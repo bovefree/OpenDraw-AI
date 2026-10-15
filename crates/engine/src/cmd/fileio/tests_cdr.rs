@@ -258,4 +258,3 @@ proptest! {
         let _ = load("mutated.cdr", &bytes);
     }
 }
-
