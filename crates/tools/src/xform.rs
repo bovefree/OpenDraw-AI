@@ -5,12 +5,12 @@
 //! on the interaction snapshot, the utility tools execute selection / paint / artboard commands.
 
 mod artboard;
+mod drop_shadow;
 mod eyedropper;
 mod free;
 mod freeform;
 mod gradient;
 mod measure;
-mod drop_shadow;
 mod transform;
 mod wand;
 
@@ -20,10 +20,10 @@ use vectorcraft_geom::{BezPath, Point, Rect, Shape};
 use crate::{Overlay, Tool};
 
 pub use artboard::ArtboardTool;
+pub use drop_shadow::DropShadowTool;
 pub use eyedropper::EyedropperTool;
 pub use free::{DistortMode, FreeTransformTool};
 pub use gradient::GradientTool;
-pub use drop_shadow::DropShadowTool;
 pub use measure::MeasureTool;
 pub use transform::{TransformKind, TransformTool};
 pub use wand::{LassoTool, MagicWandTool};
