@@ -364,9 +364,9 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
         "",
         "{} opens the Save PDF dialog; with params = document.exportPdf options written to path (asked when missing; viewAfterSaving opens the file) → {path, bytes, warnings}",
     ),
-    ("help.about", "About VectorCraft", "", "{}"),
+    ("help.about", if cfg!(feature = "opendraw") { "Informazioni su OpenDraw AI" } else { "About VectorCraft" }, "", "{}"),
     ("help.commandPalette", "Search Commands…", "Cmd+Shift+/", "{}"),
-    ("app.quit", "Quit VectorCraft", "Cmd+Q", "{}"),
+    ("app.quit", if cfg!(feature = "opendraw") { "Esci da OpenDraw AI" } else { "Quit VectorCraft" }, "Cmd+Q", "{}"),
     (
         "ui.swatchOptions",
         "Swatch Options…",
@@ -883,6 +883,13 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
 /// matched case-insensitively (`"Layers"`, `"swatches"`, `"Color Guide"`).
 pub(crate) fn normalize_panel(input: &str) -> Option<&'static str> {
     let name = input.trim();
+    // Existing scripts and saved workspaces may use English panel labels.
+    #[cfg(feature = "opendraw")]
+    for (english, id) in [("Layers", "layers"), ("Properties", "properties"), ("Libraries", "libraries")] {
+        if name.eq_ignore_ascii_case(english) {
+            return Some(id);
+        }
+    }
     crate::state::all_panels().find(|(id, label)| name.eq_ignore_ascii_case(id) || name.eq_ignore_ascii_case(label)).map(|(id, _)| id)
 }
 

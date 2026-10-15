@@ -14,7 +14,8 @@ use crate::theme::{self, Tokens};
 use crate::{VectorcraftApp, icons, widgets};
 
 const PITCH: f32 = 30.0;
-const WIDTH: f32 = 48.0;
+const WIDTH: f32 = if cfg!(feature = "opendraw") { 34.0 } else { 48.0 };
+const BUTTON_WIDTH: f32 = if cfg!(feature = "opendraw") { 30.0 } else { 36.0 };
 /// Seconds a press on a tool group's button is held before its flyout opens.
 const LONG_PRESS: f64 = 0.35;
 /// Width of the grab bar down a flyout's right side: dragging it tears the flyout off.
@@ -63,10 +64,97 @@ pub const BASIC: &[(&str, &[&[&str]])] = &[
     ("Color", &[&["gradient", "mesh"], &["eyedropper", "measure"]]),
 ];
 
+/// Compact Corel-style working order. All buttons are real engine tools:
+/// the source application icons are not copied. A long press exposes variants.
+#[cfg(feature = "opendraw")]
+pub const CLASSIC: &[(&str, &[&[&str]])] = &[
+    ("Puntatore", &[&["selection", "freeTransform", "lasso"]]),
+    // Keep node editing beside the pointer workflow; distortion tools belong
+    // with object modification, where users expect to find them.
+    ("Forma", &[&["directSelection", "groupSelection", "addAnchor", "deleteAnchor", "anchorPoint", "smooth", "join"]]),
+    ("Ritaglia", &[&["cropImage", "knife", "scissors", "lineCut", "rectCut", "eraser", "pathEraser"]]),
+    ("Zoom", &[&["zoom", "hand"]]),
+    ("Disegno", &[&["pencil", "lineSegment", "pen", "curvature", "arc"], &["paintbrush", "blobBrush"]]),
+    ("Forme", &[&["rectangle", "roundedRectangle"], &["ellipse"], &["polygon", "star"]]),
+    ("Testo", &[&["type", "areaType", "typeOnPath"]]),
+    ("Modifica", &[&["blend", "rotate", "reflect", "scale", "shear", "reshape", "width", "warp", "twirl", "pucker", "bloat"]]),
+    ("Colore", &[&["eyedropper"], &["gradient", "mesh"]]),
+    ("Naviga", &[&["rotateView"], &["artboard"]]),
+];
+
+/// Italian tool names used in OpenDraw's print-design workspace. These are
+/// functional labels for registered tools, not copied artwork or resources.
+#[cfg(feature = "opendraw")]
+pub(crate) fn classic_tool_label(id: &str) -> Option<&'static str> {
+    Some(match id {
+        "selection" => "Seleziona oggetti",
+        "freeTransform" => "Trasformazione libera",
+        "lasso" => "Selezione a mano libera",
+        "directSelection" => "Modifica forma",
+        "groupSelection" => "Seleziona gruppo",
+        "addAnchor" => "Aggiungi nodo",
+        "deleteAnchor" => "Elimina nodo",
+        "anchorPoint" => "Converti nodo",
+        "smooth" => "Smussa",
+        "join" => "Unisci tracciati",
+        "knife" => "Coltello",
+        "scissors" => "Forbici",
+        "lineCut" => "Taglio linea",
+        "rectCut" => "Taglio rettangolare",
+        "eraser" => "Gomma",
+        "pathEraser" => "Cancella tracciato",
+        "cropImage" => "Ritaglia immagine",
+        "zoom" => "Zoom",
+        "hand" => "Mano",
+        "pencil" => "Disegno a mano libera",
+        "lineSegment" => "Linea a 2 punti",
+        "pen" => "Penna Bézier",
+        "curvature" => "Curva per punti",
+        "arc" => "Arco",
+        "paintbrush" => "Pennello",
+        "blobBrush" => "Pennello vettoriale",
+        "rectangle" => "Rettangolo",
+        "roundedRectangle" => "Rettangolo arrotondato",
+        "ellipse" => "Ellisse",
+        "polygon" => "Poligono",
+        "star" => "Stella",
+        "type" => "Testo",
+        "areaType" => "Testo in riquadro",
+        "typeOnPath" => "Testo su tracciato",
+        "blend" => "Fusione",
+        "rotate" => "Ruota",
+        "reflect" => "Rifletti",
+        "scale" => "Ridimensiona",
+        "shear" => "Inclina",
+        "reshape" => "Rimodella",
+        "width" => "Larghezza tracciato",
+        "warp" => "Deforma",
+        "twirl" => "Vortice",
+        "pucker" => "Raggrinzisci",
+        "bloat" => "Gonfia",
+        "eyedropper" => "Contagocce",
+        "gradient" => "Sfumatura",
+        "mesh" => "Mesh",
+        "measure" => "Misura",
+        "rotateView" => "Ruota visualizzazione",
+        "artboard" => "Pagina",
+        _ => return None,
+    })
+}
+
+fn tool_label(t: &ToolInfo) -> String {
+    #[cfg(feature = "opendraw")]
+    let source = classic_tool_label(t.id).unwrap_or(t.label);
+    #[cfg(not(feature = "opendraw"))]
+    let source = t.label;
+    tl!(source).to_string()
+}
+
 pub(crate) fn tip(t: &ToolInfo) -> String {
+    let label = tool_label(t);
     match crate::shortcut_editor::tool_shortcut(t.id) {
-        Some(s) => format!("{} ({})", tl!(t.label), s),
-        None => tl!(t.label).to_string(),
+        Some(s) => format!("{} ({})", label, s),
+        None => label,
     }
 }
 
@@ -78,7 +166,17 @@ pub(crate) fn slots(app: &VectorcraftApp) -> Vec<(Option<&'static str>, Vec<&'st
     } else if app.ui.toolbar_advanced {
         TOOL_GROUPS.iter().map(|g| (None, g.iter().map(|t| t.id).collect())).collect()
     } else {
-        BASIC.iter().flat_map(|(cat, ss)| ss.iter().enumerate().map(move |(i, s)| (if i == 0 { Some(*cat) } else { None }, s.to_vec()))).collect()
+        #[cfg(feature = "opendraw")]
+        {
+            CLASSIC
+                .iter()
+                .flat_map(|(cat, ss)| ss.iter().enumerate().map(move |(i, s)| (if i == 0 { Some(*cat) } else { None }, s.to_vec())))
+                .collect()
+        }
+        #[cfg(not(feature = "opendraw"))]
+        {
+            BASIC.iter().flat_map(|(cat, ss)| ss.iter().enumerate().map(move |(i, s)| (if i == 0 { Some(*cat) } else { None }, s.to_vec()))).collect()
+        }
     }
 }
 
@@ -180,7 +278,10 @@ fn body(app: &mut VectorcraftApp, ui: &mut Ui, cols: usize, floating: Option<egu
         let mut raise: Option<&'static str> = None;
         let mut i = 0;
         while i < all.len() {
-            if all[i].0.is_some() && !app.session.prefs.tool_group_labels {
+            if all[i].0.is_some() && cfg!(feature = "opendraw") && app.ui.workspace == "Classica" {
+                let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), 5.0), Sense::hover());
+                ui.painter().line_segment([r.center() - vec2(9.0, 0.0), r.center() + vec2(9.0, 0.0)], Stroke::new(0.5, t.divider));
+            } else if all[i].0.is_some() && !app.session.prefs.tool_group_labels {
                 // User Interface › Show Tool Group Labels off: a faint dash between the groups.
                 let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), 9.0), Sense::hover());
                 ui.painter().line_segment([r.center() - vec2(6.0, 0.0), r.center() + vec2(6.0, 0.0)], egui::Stroke::new(1.0, t.divider));
@@ -200,7 +301,7 @@ fn body(app: &mut VectorcraftApp, ui: &mut Ui, cols: usize, floating: Option<egu
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing.x = 0.0;
                 if cols == 1 {
-                    ui.add_space((WIDTH - 36.0) / 2.0);
+                    ui.add_space((WIDTH - BUTTON_WIDTH) / 2.0);
                 } else {
                     ui.add_space(2.0);
                 }
@@ -213,8 +314,8 @@ fn body(app: &mut VectorcraftApp, ui: &mut Ui, cols: usize, floating: Option<egu
                     };
                     let Some(shown) = tool_info(&shown_id).or_else(|| tool_info(slot[0])) else { continue };
                     let is_active = slot.contains(&active);
-                    let (rect, resp) = ui.allocate_exact_size(vec2(36.0, PITCH - 1.0), Sense::click_and_drag());
-                    let well = egui::Rect::from_center_size(rect.center(), vec2(35.5, 27.5));
+                    let (rect, resp) = ui.allocate_exact_size(vec2(BUTTON_WIDTH, PITCH - 1.0), Sense::click_and_drag());
+                    let well = egui::Rect::from_center_size(rect.center(), vec2(BUTTON_WIDTH - 0.5, 27.5));
                     if is_active {
                         ui.painter().rect_filled(well, CornerRadius::same(1), t.tool_active);
                     } else if resp.hovered() {
@@ -223,7 +324,7 @@ fn body(app: &mut VectorcraftApp, ui: &mut Ui, cols: usize, floating: Option<egu
                     let ir = egui::Rect::from_center_size(rect.center(), vec2(18.0, 18.0));
                     icons::paint(ui, icons::tool_icon(shown.icon), ir, if is_active { t.text_strong } else { t.icon });
                     if slot.len() > 1 {
-                        let c = rect.center() + vec2(12.5, 10.0);
+                        let c = rect.center() + vec2(BUTTON_WIDTH / 2.0 - 5.5, 10.0);
                         ui.painter().add(egui::Shape::convex_polygon(vec![c, c + vec2(-3.5, 0.0), c + vec2(0.0, -3.5)], t.icon, Stroke::NONE));
                     }
                     if editing {
@@ -621,7 +722,7 @@ fn tool_rows(ui: &mut Ui, t: &Tokens, active: &str, tools: &[String]) -> Option<
         let ir = egui::Rect::from_min_size(r.min + vec2(24.0, 6.0), vec2(18.0, 18.0));
         icons::paint(ui, icons::tool_icon(tool.icon), ir, t.icon);
         let color = if is_active { t.flyout_active } else { t.text_strong };
-        ui.painter().text(r.left_center() + vec2(52.0, 0.0), egui::Align2::LEFT_CENTER, tl!(tool.label), egui::FontId::proportional(13.0), color);
+        ui.painter().text(r.left_center() + vec2(52.0, 0.0), egui::Align2::LEFT_CENTER, tool_label(tool), egui::FontId::proportional(13.0), color);
         if let Some(sc) = crate::shortcut_editor::tool_shortcut(tool.id) {
             ui.painter().text(
                 r.right_center() - vec2(18.0, 0.0),

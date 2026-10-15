@@ -107,3 +107,7 @@ After placed documents (File › Place of a `.vectorcraft` file, linked), M4.14�
 | 2026-10-10 | minor | M9 row from main: initial Revolve |
 | 2026-10-10 | minor | Added the Alpha gate table (core-workflow gate): all six workflows work end to end, `.ai` exchange partial but not blocking; stage stays alpha |
 | 2026-10-10 | major | Created from ROADMAP.md's milestone table and "Where we're going"; added Current focus and the beta list |
+
+## OpenDraw OD-015 — 2026-10-12
+
+Stato: parziale, verifica della nuova build in sospeso; punteggi upstream invariati. Barre/toolbox/palette compattate, pannello Classica richiudibile e proprietà testo/immagine/contorno collegate al motore; corretta l’asserzione obsoleta del workspace Classica. Il gap di fedeltà Corel resta aperto. Evidenze e limiti: [COREL_SCREENSHOT_PARITY.md](opendraw/COREL_SCREENSHOT_PARITY.md), test in crates/ui-egui/src/opendraw_shell.rs, pipeline Windows prima di macOS in opendraw-branded-preview.yml.

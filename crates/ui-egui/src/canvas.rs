@@ -1898,22 +1898,35 @@ fn home(app: &mut VectorcraftApp, ui: &mut Ui, rect: egui::Rect) {
     let inner = rect.shrink2(vec2((rect.width() - 820.0).max(40.0) / 2.0, 60.0));
     let mut child = ui.new_child(egui::UiBuilder::new().max_rect(inner).layout(egui::Layout::top_down(egui::Align::Min)));
     let ui = &mut child;
-    ui.label(egui::RichText::new(tl!("Welcome to VectorCraft")).font(theme::semibold(26.0)).color(t.text));
-    ui.add_space(4.0);
-    ui.label(egui::RichText::new(tl!("Vector illustration — fast, open, scriptable.")).size(14.0).color(t.text_dim));
+    #[cfg(feature = "opendraw")]
+    {
+        ui.label(egui::RichText::new("Benvenuto in OpenDraw AI").font(theme::semibold(26.0)).color(t.text));
+        ui.add_space(4.0);
+        ui.label(egui::RichText::new("Disegno vettoriale, impaginazione e grafica per la stampa.").size(14.0).color(t.text_dim));
+    }
+    #[cfg(not(feature = "opendraw"))]
+    {
+        ui.label(egui::RichText::new(tl!("Welcome to VectorCraft")).font(theme::semibold(26.0)).color(t.text));
+        ui.add_space(4.0);
+        ui.label(egui::RichText::new(tl!("Vector illustration — fast, open, scriptable.")).size(14.0).color(t.text_dim));
+    }
     ui.add_space(22.0);
     ui.horizontal(|ui| {
-        if widgets::primary_button(ui, tl!("New file")).clicked() {
+        if widgets::primary_button(ui, if cfg!(feature = "opendraw") { "Nuovo documento" } else { tl!("New file") }).clicked() {
             app.run("file.newDialog", json!({})).ok();
         }
         ui.add_space(8.0);
-        if widgets::secondary_button(ui, tl!("Open")).clicked() {
+        if widgets::secondary_button(ui, if cfg!(feature = "opendraw") { "Apri" } else { tl!("Open") }).clicked() {
             app.run("file.open", json!({})).ok();
         }
     });
     recent(app, ui);
     ui.add_space(28.0);
-    ui.label(egui::RichText::new(tl!("Quickly start a new file")).font(theme::semibold(14.0)).color(t.text));
+    ui.label(
+        egui::RichText::new(if cfg!(feature = "opendraw") { "Crea rapidamente un documento" } else { tl!("Quickly start a new file") })
+            .font(theme::semibold(14.0))
+            .color(t.text),
+    );
     ui.add_space(10.0);
     // A few of New Document's presets (`file.newPresets`), as its cards.
     let presets = ["Letter", "A4", "Web 1920×1080", "Phone 390×844", "Postcard", "Social Square Post 1080×1080"];
@@ -1926,10 +1939,13 @@ fn home(app: &mut VectorcraftApp, ui: &mut Ui, rect: egui::Rect) {
             }
         }
     });
-    ui.add_space(28.0);
-    ui.label(egui::RichText::new(tl!("Community")).font(theme::semibold(14.0)).color(t.text));
-    ui.add_space(10.0);
-    crate::community::links(app, ui);
+    #[cfg(not(feature = "opendraw"))]
+    {
+        ui.add_space(28.0);
+        ui.label(egui::RichText::new(tl!("Community")).font(theme::semibold(14.0)).color(t.text));
+        ui.add_space(10.0);
+        crate::community::links(app, ui);
+    }
 }
 
 /// The Home screen's Recent Files (#663): the first of File › Open Recent Files, each its name and
@@ -1942,7 +1958,11 @@ fn recent(app: &mut VectorcraftApp, ui: &mut Ui) {
     }
     let t = Tokens::get(ui.ctx());
     ui.add_space(28.0);
-    ui.label(egui::RichText::new(tl!("Recent Files")).font(theme::semibold(14.0)).color(t.text));
+    ui.label(
+        egui::RichText::new(if cfg!(feature = "opendraw") { "Documenti recenti" } else { tl!("Recent Files") })
+            .font(theme::semibold(14.0))
+            .color(t.text),
+    );
     ui.add_space(8.0);
     for path in files {
         let p = std::path::Path::new(&path);

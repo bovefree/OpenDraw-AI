@@ -1,4 +1,4 @@
-//! The tool catalogue: ids, labels, shortcuts and toolbar groups (Illustrator's Advanced toolbar order).
+//! The tool catalogue: ids, labels, shortcuts and toolbar groups.
 
 use serde::Serialize;
 
@@ -15,6 +15,10 @@ pub struct ToolInfo {
 const fn t(id: &'static str, label: &'static str, shortcut: Option<&'static str>, icon: &'static str) -> ToolInfo {
     ToolInfo { id, label, shortcut, icon }
 }
+
+/// Crop Image is a contextual tool (not part of the standard toolbar groups),
+/// but the OpenDraw Classic toolbox needs metadata to expose it in its crop flyout.
+const CROP_IMAGE: ToolInfo = t("cropImage", "Crop Image Tool", None, "tool-crop-image");
 
 /// Toolbar groups in order; the first tool of each group is the default visible one.
 pub const TOOL_GROUPS: &[&[ToolInfo]] = &[
@@ -99,7 +103,7 @@ pub const TOOL_GROUPS: &[&[ToolInfo]] = &[
         t("perspectiveSelection", "Perspective Selection Tool", Some("Shift+V"), "tool-perspective-select"),
     ],
     &[t("mesh", "Mesh Tool", Some("U"), "tool-mesh")],
-    &[t("gradient", "Gradient Tool", Some("G"), "tool-gradient")],
+    &[t("gradient", "Gradient Tool", Some("G"), "tool-gradient"), t("dropShadow", "Drop Shadow Tool", None, "tool-drop-shadow")],
     &[t("eyedropper", "Eyedropper Tool", Some("I"), "tool-eyedropper"), t("measure", "Measure Tool", None, "tool-measure")],
     &[t("blend", "Blend Tool", Some("W"), "tool-blend")],
     &[
@@ -141,7 +145,7 @@ pub fn all_tools() -> impl Iterator<Item = &'static ToolInfo> {
 }
 
 pub fn tool_info(id: &str) -> Option<&'static ToolInfo> {
-    all_tools().find(|t| t.id == id)
+    if id == crate::cropimage::ID { Some(&CROP_IMAGE) } else { all_tools().find(|t| t.id == id) }
 }
 
 /// Tool for a single-key shortcut such as "V" or "Shift+M".
@@ -191,5 +195,6 @@ mod tests {
         assert_eq!(group_of("star"), group_of("rectangle"));
         assert!(is_selection_tool("groupSelection") && !is_selection_tool("pen"));
         assert!(edits_anchors("pen") && !edits_anchors("rectangle"));
+        assert_eq!(tool_info("cropImage").map(|t| t.icon), Some("tool-crop-image"));
     }
 }

@@ -1210,12 +1210,19 @@ impl VectorcraftApp {
             #[cfg(feature = "opendraw")]
             opendraw_shell::command_bar(self, ui);
             if self.ui.control_bar {
+                #[cfg(feature = "opendraw")]
+                opendraw_shell::property_bar(self, ui);
+                #[cfg(not(feature = "opendraw"))]
                 chrome::control_bar(self, ui);
             }
         }
         if self.ui.status_bar && self.ui.screen_mode < 3 {
             chrome::status_bar(self, ui);
             chrome::hint_bar(self, ui);
+        }
+        #[cfg(feature = "opendraw")]
+        if self.ui.screen_mode < 3 {
+            opendraw_shell::page_bar(self, ui);
         }
         if self.ui.toolbar && self.ui.screen_mode < 3 {
             toolbar::show(self, ui);
@@ -1225,6 +1232,15 @@ impl VectorcraftApp {
             opendraw_shell::color_strip(self, ui);
         }
         if self.ui.dock && self.ui.screen_mode < 3 {
+            #[cfg(feature = "opendraw")]
+            {
+                if self.ui.workspace == "Classica" {
+                    opendraw_shell::classic_dock(self, ui);
+                } else {
+                    dock::show(self, ui);
+                }
+            }
+            #[cfg(not(feature = "opendraw"))]
             dock::show(self, ui);
         }
         egui::CentralPanel::default().frame(egui::Frame::NONE.fill(t.pasteboard)).show(ui, |ui| {

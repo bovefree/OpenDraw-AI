@@ -21,6 +21,7 @@
 
 mod affinity;
 mod batch;
+mod cdr;
 pub mod dxf;
 pub mod dxfimport;
 mod encode;
@@ -583,6 +584,7 @@ pub const FORMATS: &[Format] = &[
     // Affinity Photo's `.afphoto` opens by its content but isn't listed: Finder shouldn't offer a
     // vector app for a raster editor's documents.
     reader("affinity", "Affinity", &["af", "afdesign", "afpub"], "application/vnd.affinity", false),
+    reader("cdr", "CorelDRAW", &["cdr"], "application/vnd.corel.zcf.draw.document+zip", false),
     // Photoshop's large document format: read like a PSD (its merged image), never written.
     reader("psb", "PSB", &["psb"], "image/x-psb", true),
 ];
@@ -607,6 +609,7 @@ pub const OPEN_EXTS: &[&str] = &[
     "psd",
     "psb",
     "vctemplate",
+    "cdr",
     "dxf",
     "emf",
     "wmf",
@@ -656,6 +659,7 @@ pub const PLACE_EXTS: &[&str] = &[
     "psd",
     "psb",
     "vctemplate",
+    "cdr",
     "dxf",
     "emf",
     "wmf",
@@ -1053,6 +1057,8 @@ pub(crate) fn write_or_return(path: Option<&str>, bytes: &[u8], extra: Value) ->
 mod tests;
 #[cfg(test)]
 mod tests_affinity;
+#[cfg(test)]
+mod tests_cdr;
 #[cfg(test)]
 mod tests_pdf;
 #[cfg(test)]

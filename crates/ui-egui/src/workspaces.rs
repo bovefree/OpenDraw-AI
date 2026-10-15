@@ -64,7 +64,7 @@ pub fn builtins() -> Vec<Workspace> {
     };
     #[cfg(feature = "opendraw")]
     {
-        return vec![
+        vec![
             w(ESSENTIALS, &|_| {}),
             w("Social e comunicazione", &|x| {
                 x.control_bar = true;
@@ -88,7 +88,7 @@ pub fn builtins() -> Vec<Workspace> {
                 x.dock_tab = DockTab::Layers;
                 x.open_panel = Some("stroke".into());
             }),
-        ];
+        ]
     }
     #[cfg(not(feature = "opendraw"))]
     vec![
@@ -532,7 +532,8 @@ mod tests {
         let names = names(&ui);
         assert_eq!(names, ["Classica", "Social e comunicazione", "Stampa e prestampa", "Disegno vettoriale"]);
         assert_eq!(ui.workspace, "Classica");
-        assert!(ui.control_bar && ui.view.rulers && ui.toolbar_advanced);
+        assert!(ui.control_bar && ui.view.rulers);
+        assert!(!ui.toolbar_advanced && !ui.toolbar_double, "Classica uses the compact single-column toolbox");
         assert_eq!(ui.dock_tab, DockTab::Layers);
 
         ui.brightness = crate::theme::Brightness::Light;

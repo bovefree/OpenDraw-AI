@@ -69,7 +69,8 @@ fn find<'a>(bar: &'a MenuBar, command: &str) -> &'a native_menu::Item {
 fn vectorcraft_gets_a_mac_app_menu() {
     let bar = bar(&app(true));
     let titles: Vec<&str> = bar.menus.iter().map(|m| m.title.as_str()).collect();
-    assert_eq!(titles, ["VectorCraft", "File", "Edit", "Object", "Type", "Select", "Effect", "View", "Window", "Help"]);
+    let app_name = if cfg!(feature = "opendraw") { "OpenDraw AI" } else { "VectorCraft" };
+    assert_eq!(titles, [app_name, "File", "Edit", "Object", "Type", "Select", "Effect", "View", "Window", "Help"]);
     let app_menu = &bar.menus[0];
     assert_eq!(app_menu.role, MenuRole::App);
     assert_eq!(
@@ -94,10 +95,13 @@ fn vectorcraft_gets_a_mac_app_menu() {
         let it = find(&bar, command);
         (it.label.as_str(), it.shortcut)
     };
-    assert_eq!(shown("help.about"), ("About VectorCraft", None));
-    assert_eq!(shown("app.quit"), ("Quit VectorCraft", Some("Cmd+Q")), "Quit is the app's own, so unsaved documents are asked about");
+    let about_label = if cfg!(feature = "opendraw") { "Informazioni su OpenDraw AI" } else { "About VectorCraft" };
+    let quit_label = if cfg!(feature = "opendraw") { "Quit OpenDraw AI" } else { "Quit VectorCraft" };
+    let hide_label = if cfg!(feature = "opendraw") { "Hide OpenDraw AI" } else { "Hide VectorCraft" };
+    assert_eq!(shown("help.about"), (about_label, None));
+    assert_eq!(shown("app.quit"), (quit_label, Some("Cmd+Q")), "Quit is the app's own, so unsaved documents are asked about");
     // ⌘H stays View › Hide Edges (Illustrator's); Hide takes ⌃⌘H.
-    assert_eq!(shown(native_menu::HIDE), ("Hide VectorCraft", Some("Ctrl+Cmd+H")));
+    assert_eq!(shown(native_menu::HIDE), (hide_label, Some("Ctrl+Cmd+H")));
     assert_eq!(shown(native_menu::HIDE_OTHERS), ("Hide Others", Some("Cmd+Alt+H")));
     assert_eq!(find(&bar, "view.edges").shortcut, Some("Cmd+H"));
     assert_eq!(bar.menu(MenuRole::Help).map(|m| m.title.as_str()), Some("Help"));

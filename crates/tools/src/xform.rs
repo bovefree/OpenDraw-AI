@@ -1,10 +1,11 @@
 //! Transform and utility tools (rotate/reflect/scale/shear, free transform, eyedropper, gradient,
-//! artboard, magic wand, lasso, measure).
+//! drop shadow, artboard, magic wand, lasso, measure).
 //!
 //! Like every tool they only emit actions: transforms preview `object.transform` / `object.distort`
 //! on the interaction snapshot, the utility tools execute selection / paint / artboard commands.
 
 mod artboard;
+mod drop_shadow;
 mod eyedropper;
 mod free;
 mod freeform;
@@ -19,6 +20,7 @@ use vectorcraft_geom::{BezPath, Point, Rect, Shape};
 use crate::{Overlay, Tool};
 
 pub use artboard::ArtboardTool;
+pub use drop_shadow::DropShadowTool;
 pub use eyedropper::EyedropperTool;
 pub use free::{DistortMode, FreeTransformTool};
 pub use gradient::GradientTool;
@@ -36,6 +38,7 @@ pub fn create(id: &str) -> Option<Box<dyn Tool>> {
         "freeTransform" => Box::new(FreeTransformTool::default()),
         "eyedropper" => Box::new(EyedropperTool::default()),
         "gradient" => Box::new(GradientTool::default()),
+        "dropShadow" => Box::new(DropShadowTool::default()),
         "artboard" => Box::new(ArtboardTool::default()),
         "magicWand" => Box::new(MagicWandTool),
         "lasso" => Box::new(LassoTool::default()),

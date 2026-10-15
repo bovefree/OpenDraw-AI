@@ -32,7 +32,8 @@ pub fn app_bar(app: &mut VectorcraftApp, ui: &mut Ui) {
     let system = system_title_bar(app);
     let left = app.titlebar_inset.clamp(8.0, f32::from(i8::MAX)) as i8;
     let frame = egui::Frame::NONE.fill(t.app_bar).inner_margin(egui::Margin { left, right: if custom { 0 } else { 14 }, top: 0, bottom: 0 });
-    let bar = egui::Panel::top("app_bar").exact_size(APP_BAR_HEIGHT).frame(frame.stroke(Stroke::new(1.0, t.border))).show(ui, |ui| {
+    let bar_height = if cfg!(feature = "opendraw") && system { 26.0 } else { APP_BAR_HEIGHT };
+    let bar = egui::Panel::top("app_bar").exact_size(bar_height).frame(frame.stroke(Stroke::new(1.0, t.border))).show(ui, |ui| {
         if custom {
             titlebar::drag_area(ui, ui.max_rect());
         }
@@ -377,7 +378,13 @@ pub fn doc_tabs(app: &mut VectorcraftApp, ui: &mut Ui) {
     /// The width of the » button.
     const MORE: f32 = 30.0;
     let t = Tokens::get(ui.ctx());
-    let (height, title_size) = if app.session.prefs.large_tabs { (44.0, 14.0) } else { (35.0, 12.5) };
+    let (height, title_size) = if app.session.prefs.large_tabs {
+        (44.0, 14.0)
+    } else if cfg!(feature = "opendraw") && app.ui.workspace == "Classica" {
+        (26.0, 12.0)
+    } else {
+        (35.0, 12.5)
+    };
     let (strip, _) = ui.allocate_exact_size(vec2(ui.available_width(), height), Sense::hover());
     ui.painter().rect_filled(strip, 0.0, t.tab_strip);
     ui.painter().line_segment([strip.left_bottom(), strip.right_bottom()], Stroke::new(1.0, t.border));
